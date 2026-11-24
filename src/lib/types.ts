@@ -42,7 +42,7 @@ export interface Booking {
   city: string
   state: string
   setting: "indoor" | "outdoor" | "both"
-  guests: string
+  guests: string // empty on new bookings
   drone_slug: string
   drone_name: string
   deliverables: string[]

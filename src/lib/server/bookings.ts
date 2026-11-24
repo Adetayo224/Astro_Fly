@@ -41,7 +41,7 @@ export async function createBooking(input: BookingData): Promise<Booking> {
     city: input.city,
     state: input.state,
     setting: input.setting,
-    guests: input.guests,
+    guests: "", // no longer asked; column kept for older bookings
     drone_slug: input.drone_slug,
     drone_name: droneName(input.drone_slug),
     deliverables: input.deliverables,

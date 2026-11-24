@@ -579,7 +579,7 @@ function BookingDetail({
               ["Duration", b.duration === "Custom" ? b.custom_duration ?? "Custom" : b.duration],
               ["Venue", `${b.venue_name}, ${b.address}, ${b.city}, ${b.state}`],
               ["Setting", b.setting],
-              ["Guests", b.guests],
+              ...(b.guests ? [["Guests", b.guests]] : []),
               ["Drone", b.drone_name],
               ["Deliverables", deliverableLabels(b.deliverables).join(", ")],
               [

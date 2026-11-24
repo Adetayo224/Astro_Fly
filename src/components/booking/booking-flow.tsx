@@ -12,7 +12,6 @@ import {
   DELIVERABLES,
   DURATIONS,
   EVENT_TYPES,
-  GUEST_RANGES,
   NIGERIAN_STATES,
   SETTINGS,
   STEP_FIELDS,
@@ -45,7 +44,6 @@ const DEFAULTS: BookingInput = {
   city: "",
   state: "",
   setting: undefined as unknown as "outdoor",
-  guests: "",
   drone_slug: "",
   deliverables: [],
   has_pilot: undefined as unknown as "yes",
@@ -436,21 +434,6 @@ export function BookingFlow({
                       </Field>
                     )}
                   />
-                  <Controller
-                    control={control}
-                    name="guests"
-                    render={({ field }) => (
-                      <Field label="Roughly how many guests?" error={errors.guests?.message}>
-                        <div role="radiogroup" className="flex flex-wrap gap-2">
-                          {GUEST_RANGES.map((g) => (
-                            <Chip key={g} selected={field.value === g} onClick={() => field.onChange(g)} className="flex-1 basis-[30%]">
-                              {g}
-                            </Chip>
-                          ))}
-                        </div>
-                      </Field>
-                    )}
-                  />
                 </>
               )}
 
@@ -617,7 +600,6 @@ export function BookingFlow({
                     <Row k="Duration" v={v.duration === "Custom" ? v.custom_duration || "Custom" : v.duration} />
                     <Row k="Venue" v={`${v.venue_name}, ${v.address}, ${v.city}, ${v.state}`} />
                     <Row k="Setting" v={SETTINGS.find((s) => s.id === v.setting)?.label ?? ""} />
-                    <Row k="Guests" v={v.guests} />
                   </Summary>
                   <Summary title="Shoot" onEdit={() => go(2)}>
                     <Row k="Drone" v={drone?.name ?? ""} />

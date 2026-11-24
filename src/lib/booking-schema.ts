@@ -27,7 +27,6 @@ export const SETTINGS = [
   { id: "both", label: "Both" },
 ] as const
 
-export const GUEST_RANGES = ["Under 50", "50 to 150", "150 to 300", "300 to 600", "600 plus"] as const
 
 export const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
@@ -72,7 +71,6 @@ export const eventSchema = z.object({
   city: z.string().trim().min(2, "Enter the city").max(80),
   state: z.string().min(1, "Choose the state"),
   setting: z.enum(["indoor", "outdoor", "both"], { message: "Indoor or outdoor?" }),
-  guests: z.string().min(1, "Roughly how many guests?"),
 })
 
 export const needsSchema = z.object({
@@ -120,7 +118,6 @@ export const STEP_FIELDS = [
     "city",
     "state",
     "setting",
-    "guests",
   ],
   ["drone_slug", "deliverables", "has_pilot", "notes"],
   ["pay_option", "terms"],

@@ -23,7 +23,7 @@ export default function TeamAlertEmail({ booking, siteUrl }: { booking: Booking;
           ["Venue", booking.venue_name],
           ["Address", `${booking.address}, ${booking.city}, ${booking.state}`],
           ["Setting", booking.setting],
-          ["Guests", booking.guests],
+          ...(booking.guests ? [["Guests", booking.guests] as [string, string]] : []),
           ["Drone", booking.drone_name],
           ["Deliverables", deliverableLabels(booking.deliverables).join(", ")],
           [
