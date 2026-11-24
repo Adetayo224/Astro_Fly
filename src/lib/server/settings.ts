@@ -13,9 +13,15 @@ export async function getPricing(): Promise<Pricing> {
   cacheTag("pricing")
   const sb = supabaseAdmin()
   if (!sb) return mockPricing ?? DEFAULT_PRICING
-  const { data } = await sb.from(TABLE).select("deposit_ngn, pilot_fee_ngn").eq("id", 1).maybeSingle()
+  const { data } = await sb.from(TABLE).select("deposit_ngn, pilot_fee_ngn, full_day_ngn, hourly_ngn, min_hours").eq("id", 1).maybeSingle()
   if (!data) return DEFAULT_PRICING
-  return { depositNaira: data.deposit_ngn, pilotFeeNaira: data.pilot_fee_ngn }
+  return {
+    depositNaira: data.deposit_ngn,
+    pilotFeeNaira: data.pilot_fee_ngn,
+    fullDayNaira: data.full_day_ngn,
+    hourlyNaira: data.hourly_ngn,
+    minHours: data.min_hours,
+  }
 }
 
 export async function updatePricing(p: Pricing, by: string): Promise<Pricing> {
@@ -25,7 +31,15 @@ export async function updatePricing(p: Pricing, by: string): Promise<Pricing> {
   } else {
     const { error } = await sb
       .from(TABLE)
-      .upsert({ id: 1, deposit_ngn: p.depositNaira, pilot_fee_ngn: p.pilotFeeNaira, updated_by: by })
+      .upsert({
+        id: 1,
+        deposit_ngn: p.depositNaira,
+        pilot_fee_ngn: p.pilotFeeNaira,
+        full_day_ngn: p.fullDayNaira,
+        hourly_ngn: p.hourlyNaira,
+        min_hours: p.minHours,
+        updated_by: by,
+      })
     if (error) throw new Error(error.message)
   }
   revalidateTag("pricing", { expire: 0 })

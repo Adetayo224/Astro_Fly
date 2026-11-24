@@ -96,8 +96,8 @@ export function SuccessScreen({ data, onClose }: { data: SuccessData; onClose?: 
           Thank you, {data.name}. You are on our flight plan.
         </motion.h3>
         <motion.p variants={item} className="mt-3 text-[14.5px] leading-relaxed text-subtle">
-          We sent a confirmation email to <span className="text-fg">{data.email}</span>. Our team will reply with your
-          price within 24 hours.
+          We sent a confirmation email to <span className="text-fg">{data.email}</span>. Our team will confirm your date
+          within 24 hours.
           {data.needsPilot && " We will also match you with a pilot and send you their name and number."}
         </motion.p>
 

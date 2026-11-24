@@ -1,7 +1,7 @@
 "use client"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AnimatePresence, motion } from "framer-motion"
-import { ArrowLeft, ArrowRight, Loader2, Lock, Pencil, UserRound, UsersRound } from "lucide-react"
+import { ArrowLeft, ArrowRight, CalendarClock, Clock, Loader2, Minus, Pencil, Plus, UserRound, UsersRound } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Controller, useForm, type Resolver } from "react-hook-form"
@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import {
   bookingSchema,
   DELIVERABLES,
-  DURATIONS,
   EVENT_TYPES,
   NIGERIAN_STATES,
   SETTINGS,
@@ -19,7 +18,7 @@ import {
   type BookingInput,
 } from "@/lib/booking-schema"
 import { deliverableLabels, formatEventDate, formatTime } from "@/lib/format"
-import { formatNaira, upfrontNaira } from "@/lib/site"
+import { FULL_DAY, MAX_HOURS, bookingTotal, formatNaira, hoursFrom, hoursLabel, shootPrice, upfrontNaira } from "@/lib/site"
 import type { Drone } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useBooking } from "./booking-provider"
@@ -116,7 +115,8 @@ export function BookingFlow({
   const whatsappSame = watch("whatsapp_same")
   const duration = watch("duration")
   const hasPilot = watch("has_pilot")
-  const dueNow = upfrontNaira(hasPilot === "no", pricing)
+  const total = bookingTotal(duration || "", hasPilot === "no", pricing)
+  const dueNow = upfrontNaira(hasPilot === "no", pricing, total)
 
   const scrollTop = () => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
 
@@ -127,10 +127,6 @@ export function BookingFlow({
       // Cross field checks shown alongside the other errors on this step
       if (step === 0 && !getValues("whatsapp_same") && !/^\+?\d{10,15}$/.test((getValues("whatsapp") || "").replace(/[\s()]/g, ""))) {
         form.setError("whatsapp", { message: "Enter a valid WhatsApp number" })
-        extraOk = false
-      }
-      if (step === 1 && getValues("duration") === "Custom" && !getValues("custom_duration")?.trim()) {
-        form.setError("custom_duration", { message: "Tell us how long you need" })
         extraOk = false
       }
       if (!ok || !extraOk) {
@@ -353,37 +349,93 @@ export function BookingFlow({
                   <Controller
                     control={control}
                     name="duration"
-                    render={({ field }) => (
-                      <Field label="How long should we fly?" error={errors.duration?.message}>
-                        <div role="radiogroup" className="grid grid-cols-3 gap-2">
-                          {DURATIONS.map((d) => (
-                            <Chip key={d} selected={field.value === d} onClick={() => field.onChange(d)}>
-                              {d}
-                            </Chip>
-                          ))}
-                        </div>
-                      </Field>
-                    )}
-                  />
-                  <AnimatePresence initial={false}>
-                    {duration === "Custom" && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <Field label="Custom duration" htmlFor="custom_duration" error={errors.custom_duration?.message}>
-                          <TextInput
-                            id="custom_duration"
-                            placeholder="For example, 5 hours or two days"
-                            invalid={!!errors.custom_duration}
-                            {...register("custom_duration")}
-                          />
+                    render={({ field }) => {
+                      const hours = hoursFrom(field.value || "")
+                      const plans = [
+                        {
+                          id: "full",
+                          on: field.value === FULL_DAY,
+                          icon: <CalendarClock className="size-5" />,
+                          title: "Full day",
+                          body: "We cover the whole event, however long it runs.",
+                          price: formatNaira(pricing.fullDayNaira),
+                          pick: () => field.onChange(FULL_DAY),
+                        },
+                        {
+                          id: "hourly",
+                          on: hours !== null,
+                          icon: <Clock className="size-5" />,
+                          title: "By the hour",
+                          body: `${formatNaira(pricing.hourlyNaira)} per hour, minimum ${hoursLabel(pricing.minHours)} (${formatNaira(pricing.hourlyNaira * pricing.minHours)}).`,
+                          price: `${formatNaira(pricing.hourlyNaira)}/hr`,
+                          pick: () => hours === null && field.onChange(hoursLabel(pricing.minHours)),
+                        },
+                      ]
+                      const setHours = (h: number) => field.onChange(hoursLabel(Math.min(MAX_HOURS, Math.max(1, h))))
+                      const hourly = hours !== null ? shootPrice(field.value, pricing) : null
+                      return (
+                        <Field label="How would you like to book?" error={errors.duration?.message}>
+                          <div role="radiogroup" className="grid gap-2.5 sm:grid-cols-2">
+                            {plans.map((o) => (
+                              <button
+                                key={o.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={o.on}
+                                onClick={o.pick}
+                                className={cn(
+                                  "flex flex-col gap-2 rounded-2xl border p-4 text-left transition-colors active:scale-[0.99]",
+                                  o.on ? "border-signal bg-signal/8" : "border-line bg-surface/50 hover:border-fg/25",
+                                  errors.duration && !o.on && "border-destructive/60",
+                                )}
+                              >
+                                <span className="flex items-center justify-between gap-2">
+                                  <span className={cn("text-subtle", o.on && "text-signal-ink")}>{o.icon}</span>
+                                  <span className="font-mono text-[13px] font-semibold">{o.price}</span>
+                                </span>
+                                <span className="text-[15px] font-semibold">{o.title}</span>
+                                <span className="text-[12.5px] leading-relaxed text-subtle">{o.body}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <AnimatePresence initial={false}>
+                            {hours !== null && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="mt-1 flex items-center gap-3 rounded-2xl border border-line bg-surface/60 p-3">
+                                  <Button variant="outline" size="icon" aria-label="Fewer hours" onClick={() => setHours(hours - 1)} disabled={hours <= 1}>
+                                    <Minus />
+                                  </Button>
+                                  <div className="flex-1 text-center">
+                                    <p className="font-heading text-[20px] font-semibold tabular-nums">{hoursLabel(hours)}</p>
+                                    <p className="text-[12.5px] text-subtle">{formatNaira(hourly ?? 0)}</p>
+                                  </div>
+                                  <Button variant="outline" size="icon" aria-label="More hours" onClick={() => setHours(hours + 1)} disabled={hours >= MAX_HOURS}>
+                                    <Plus />
+                                  </Button>
+                                </div>
+                                {hours < pricing.minHours && (
+                                  <p className="mt-2 text-[12.5px] leading-relaxed text-subtle">
+                                    Bookings under {hoursLabel(pricing.minHours)} pay the minimum of{" "}
+                                    {formatNaira(pricing.hourlyNaira * pricing.minHours)}.
+                                  </p>
+                                )}
+                                {hourly === pricing.fullDayNaira && hours * pricing.hourlyNaira >= pricing.fullDayNaira && (
+                                  <p className="mt-2 text-[12.5px] leading-relaxed text-signal-ink">
+                                    This is the same as the full day price, so we will cover the whole event.
+                                  </p>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </Field>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      )
+                    }}
+                  />
                   <Field label="Venue name" htmlFor="venue_name" error={errors.venue_name?.message}>
                     <TextInput
                       id="venue_name"
@@ -599,7 +651,7 @@ export function BookingFlow({
                     <Row k="Type" v={v.event_type} />
                     <Row k="Date" v={formatEventDate(v.event_date)} />
                     <Row k="Start" v={formatTime(v.start_time)} />
-                    <Row k="Duration" v={v.duration === "Custom" ? v.custom_duration || "Custom" : v.duration} />
+                    <Row k="Booked for" v={v.duration === FULL_DAY ? "Full day" : `${v.duration}, by the hour`} />
                     <Row k="Venue" v={`${v.venue_name}, ${v.address}, ${v.city}, ${v.state}`} />
                     <Row k="Setting" v={SETTINGS.find((s) => s.id === v.setting)?.label ?? ""} />
                   </Summary>
@@ -616,14 +668,26 @@ export function BookingFlow({
                   <div className="brackets rounded-3xl border border-line bg-surface/60 p-5">
                     <div className="flex items-end justify-between gap-4">
                       <div>
-                        <p className="eyebrow">Price</p>
-                        <p className="mt-2 font-heading text-[26px] font-semibold tracking-tight">To be confirmed</p>
+                        <p className="eyebrow">Your price</p>
+                        <p className="mt-2 font-heading text-[30px] font-semibold tracking-tight tabular-nums">
+                          {total !== null ? formatNaira(total) : "Choose how long"}
+                        </p>
                       </div>
-                      <Lock className="mb-2 size-5 text-subtle" />
                     </div>
-                    <p className="mt-2 text-[13.5px] leading-relaxed text-subtle">
-                      We price every shoot after checking the venue, the drone and what you need. You will get the final
-                      price by email and WhatsApp within 24 hours.
+                    <dl className="mt-3 flex flex-col gap-1.5 text-[13.5px]">
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-subtle">{v.duration === FULL_DAY ? "Full day" : `${v.duration || ""} by the hour`}</dt>
+                        <dd className="font-mono tabular-nums">{formatNaira(shootPrice(v.duration || "", pricing) ?? 0)}</dd>
+                      </div>
+                      {v.has_pilot === "no" && (
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-subtle">Astro_Fly pilot</dt>
+                          <dd className="font-mono tabular-nums">{formatNaira(pricing.pilotFeeNaira)}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    <p className="mt-3 text-[13px] leading-relaxed text-subtle">
+                      We confirm your date by email and WhatsApp within 24 hours.
                     </p>
                   </div>
 
@@ -640,12 +704,12 @@ export function BookingFlow({
                               body:
                                 hasPilot === "no"
                                   ? `${formatNaira(pricing.depositNaira)} to hold your date plus ${formatNaira(pricing.pilotFeeNaira)} for your pilot, by bank transfer to Samfred Robotics. We confirm it by email.`
-                                  : "By bank transfer to Samfred Robotics. Your date is held once we confirm it by email, and it comes off your final price.",
+                                  : "By bank transfer to Samfred Robotics. Your date is held once we confirm it by email, and it comes off your total.",
                             },
                             {
                               id: "later" as const,
                               title: "Pay after we confirm",
-                              body: "Book now and pay by bank transfer once we send your price. Your date is held once payment comes in.",
+                              body: "Book now and pay by bank transfer once we confirm your date. Your date is held once payment comes in.",
                             },
                           ].map((o) => {
                             const on = field.value === o.id

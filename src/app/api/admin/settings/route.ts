@@ -25,7 +25,15 @@ export async function GET(req: Request) {
 
 const naira = z.number().int("Use whole naira").min(0, "Cannot be below zero").max(10_000_000, "That is too high")
 const schema = z.object({
-  pricing: z.object({ depositNaira: naira, pilotFeeNaira: naira }).optional(),
+  pricing: z
+    .object({
+      depositNaira: naira,
+      pilotFeeNaira: naira,
+      fullDayNaira: naira,
+      hourlyNaira: naira,
+      minHours: z.number().int().min(1, "At least 1 hour").max(24, "At most 24 hours"),
+    })
+    .optional(),
   notifyEmail: z.boolean().optional(),
 })
 

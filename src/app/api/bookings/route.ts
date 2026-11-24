@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       email: booking.email,
       pay_option: booking.pay_option,
       needs_pilot: booking.needs_pilot,
-      amount_due: upfrontNaira(booking.needs_pilot, pricing),
+      amount_due: upfrontNaira(booking.needs_pilot, pricing, booking.price),
     })
   } catch (e) {
     console.error("[bookings] create failed", e)

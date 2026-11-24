@@ -19,8 +19,7 @@ export default function BookingConfirmationEmail({
     <EmailLayout preview={`We have your booking. Reference ${booking.reference}`} siteUrl={siteUrl}>
       <H>Thank you, {first}. We have your booking.</H>
       <P>
-        Our team will look at your event details and get back to you within 24 hours with the price and a
-        confirmation. Keep this reference handy. You will need it to check your booking.
+        Our team will check your event details and confirm your date within 24 hours. Keep this reference handy. You will need it to check your booking.
       </P>
       <RefBadge reference={booking.reference} />
       <Rows
@@ -28,7 +27,7 @@ export default function BookingConfirmationEmail({
           ["Event", booking.event_type],
           ["Date", formatEventDate(booking.event_date)],
           ["Start time", formatTime(booking.start_time)],
-          ["Duration", booking.duration === "Custom" ? booking.custom_duration || "Custom" : booking.duration],
+          ["Booked for", booking.duration === "Full day" ? "Full day" : booking.duration === "Custom" ? booking.custom_duration || "Custom" : `${booking.duration}, by the hour`],
           ["Venue", `${booking.venue_name}, ${booking.city}`],
           ["Drone", booking.drone_name],
           ["You want", deliverableLabels(booking.deliverables).join(", ")],
@@ -42,7 +41,7 @@ export default function BookingConfirmationEmail({
           <P>You chose to pay now to hold your date. Transfer it to the account below. Your date is held once we confirm it by email.</P>
           <BankDetails
             reference={booking.reference}
-            amount={`NGN ${(depositNaira + booking.pilot_fee).toLocaleString("en-NG")}${booking.pilot_fee ? ` (includes NGN ${booking.pilot_fee.toLocaleString("en-NG")} for your pilot)` : ""}`}
+            amount={`NGN ${Math.min(depositNaira + booking.pilot_fee, booking.price || Infinity).toLocaleString("en-NG")}${booking.pilot_fee ? ` (includes NGN ${booking.pilot_fee.toLocaleString("en-NG")} for your pilot)` : ""}`}
           />
         </>
       ) : null}

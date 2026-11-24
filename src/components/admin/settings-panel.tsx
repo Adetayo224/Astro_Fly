@@ -5,7 +5,8 @@ import { toast } from "sonner"
 import { CheckRow, Field, PasswordInput, TextInput } from "@/components/booking/fields"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatNaira, type Pricing } from "@/lib/site"
+import { formatNaira, hoursLabel, shootPrice, type Pricing } from "@/lib/site"
+import { cn } from "@/lib/utils"
 import { supabaseBrowser } from "@/lib/supabase-browser"
 
 interface SettingsData {
@@ -96,20 +97,30 @@ export function SettingsPanel({
 }
 
 function PricesCard({ pricing, save }: { pricing: Pricing; save: (p: Pricing) => Promise<unknown> }) {
-  const [deposit, setDeposit] = useState(String(pricing.depositNaira))
-  const [pilot, setPilot] = useState(String(pricing.pilotFeeNaira))
+  const [form, setForm] = useState<Record<keyof Pricing, string>>({
+    fullDayNaira: String(pricing.fullDayNaira),
+    hourlyNaira: String(pricing.hourlyNaira),
+    minHours: String(pricing.minHours),
+    depositNaira: String(pricing.depositNaira),
+    pilotFeeNaira: String(pricing.pilotFeeNaira),
+  })
   const [busy, setBusy] = useState(false)
-  const d = Number(digits(deposit) || 0)
-  const p = Number(digits(pilot) || 0)
-  const changed = d !== pricing.depositNaira || p !== pricing.pilotFeeNaira
-
-  const step = (set: (v: string) => void, value: number, by: number) => set(String(Math.max(0, value + by)))
+  const n = (k: keyof Pricing) => Number(digits(form[k]) || 0)
+  const next: Pricing = {
+    fullDayNaira: n("fullDayNaira"),
+    hourlyNaira: n("hourlyNaira"),
+    minHours: Math.max(1, n("minHours")),
+    depositNaira: n("depositNaira"),
+    pilotFeeNaira: n("pilotFeeNaira"),
+  }
+  const changed = (Object.keys(next) as (keyof Pricing)[]).some((k) => next[k] !== pricing[k])
+  const set = (k: keyof Pricing, v: string) => setForm((f) => ({ ...f, [k]: digits(v) }))
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true)
     try {
-      await save({ depositNaira: d, pilotFeeNaira: p })
+      await save(next)
       toast.success("Prices saved. The booking form shows them now.")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save")
@@ -118,43 +129,61 @@ function PricesCard({ pricing, save }: { pricing: Pricing; save: (p: Pricing) =>
     }
   }
 
-  const row = (id: string, label: string, hint: string, value: string, set: (v: string) => void, n: number) => (
-    <Field label={label} htmlFor={id} hint={hint}>
-      <div className="flex gap-2">
-        <Button variant="outline" size="icon" aria-label={`Lower ${label} by 5,000`} onClick={() => step(set, n, -5000)}>
-          <Minus />
-        </Button>
-        <div className="relative flex-1">
-          <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-subtle">₦</span>
-          <TextInput
-            id={id}
-            inputMode="numeric"
-            value={n ? n.toLocaleString("en-NG") : value === "" ? "" : "0"}
-            onChange={(e) => set(digits(e.target.value))}
-            className="pl-9 font-mono tabular-nums"
-          />
+  const row = (k: keyof Pricing, label: string, hint: string, stepBy: number, unit: "naira" | "hours" = "naira") => {
+    const value = n(k)
+    return (
+      <Field label={label} htmlFor={`set-${k}`} hint={hint}>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon" aria-label={`Lower ${label}`} onClick={() => set(k, String(Math.max(unit === "hours" ? 1 : 0, value - stepBy)))}>
+            <Minus />
+          </Button>
+          <div className="relative flex-1">
+            {unit === "naira" ? (
+              <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-subtle">₦</span>
+            ) : (
+              <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[13px] text-subtle">hours</span>
+            )}
+            <TextInput
+              id={`set-${k}`}
+              inputMode="numeric"
+              value={form[k] === "" ? "" : unit === "naira" ? value.toLocaleString("en-NG") : String(value)}
+              onChange={(e) => set(k, e.target.value)}
+              className={cn("font-mono tabular-nums", unit === "naira" && "pl-9")}
+            />
+          </div>
+          <Button variant="outline" size="icon" aria-label={`Raise ${label}`} onClick={() => set(k, String(value + stepBy))}>
+            <Plus />
+          </Button>
         </div>
-        <Button variant="outline" size="icon" aria-label={`Raise ${label} by 5,000`} onClick={() => step(set, n, 5000)}>
-          <Plus />
-        </Button>
-      </div>
-    </Field>
-  )
+      </Field>
+    )
+  }
 
+  const example = (h: number) => shootPrice(hoursLabel(h), next) ?? 0
   return (
     <Card icon={<Wallet className="size-[18px]" />} title="Prices">
       <form onSubmit={submit} className="flex flex-col gap-5">
-        {row("set-deposit", "Deposit to hold a date", "Paid by every customer to hold their date.", deposit, setDeposit, d)}
-        {row("set-pilot", "Pilot fee", "Added when a customer asks us to provide the pilot.", pilot, setPilot, p)}
+        <p className="eyebrow">Shoot price</p>
+        {row("fullDayNaira", "Full day (whole event)", "One price for the whole event, however long it runs.", 5000)}
+        {row("hourlyNaira", "Per hour", "For customers who do not want the full day.", 500)}
+        {row("minHours", "Minimum hours", "Short bookings are charged for at least this many hours.", 1, "hours")}
+        <p className="eyebrow mt-2">Extras and deposit</p>
+        {row("pilotFeeNaira", "Pilot fee", "Added when a customer asks us to provide the pilot.", 5000)}
+        {row("depositNaira", "Deposit to hold a date", "Paid to hold the date. It comes off the total.", 5000)}
         <div className="rounded-2xl border border-line bg-bg/50 p-4 text-[13.5px] leading-relaxed">
-          <p>
-            Customer with their own pilot pays <strong>{formatNaira(d)}</strong> to hold the date.
-          </p>
-          <p>
-            Customer who needs our pilot pays <strong>{formatNaira(d + p)}</strong> to hold the date.
-          </p>
+          <p className="font-medium">What customers see</p>
+          <ul className="mt-2 flex flex-col gap-1">
+            <li>Full day: <strong>{formatNaira(next.fullDayNaira)}</strong></li>
+            <li>
+              By the hour: <strong>{formatNaira(next.hourlyNaira)}</strong> per hour, minimum {hoursLabel(next.minHours)} (
+              {formatNaira(next.hourlyNaira * next.minHours)})
+            </li>
+            <li>2 hours pays {formatNaira(example(2))}, 6 hours pays {formatNaira(example(6))}</li>
+            <li>Our pilot adds {formatNaira(next.pilotFeeNaira)}</li>
+          </ul>
           <p className="mt-2 text-[12.5px] text-subtle">
-            New prices apply to new bookings. Bookings already made keep the pilot fee they booked with.
+            Hourly bookings never cost more than the full day. New prices apply to new bookings only; you can still change
+            the price on any single booking.
           </p>
         </div>
         <Button type="submit" size="lg" block disabled={busy || !changed}>

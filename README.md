@@ -92,7 +92,9 @@ private and shown to the team through short lived signed links.
 
 The **Settings** tab in the dashboard has:
 
-* **Prices:** the deposit to hold a date and the pilot fee. Use the minus and plus buttons (steps of ₦5,000) or type
+* **Prices:** full day price (default ₦50,000), hourly rate (₦5,000) with a minimum number of hours (4, so
+  short bookings pay at least ₦20,000), the pilot fee and the deposit to hold a date. Hourly bookings are capped at the
+  full day price. New bookings get their price filled in automatically; you can still change it per booking. Use the minus and plus buttons (steps of ₦5,000) or type
   an amount, then Save. The booking form and My Bookings use the new prices straight away. Bookings already made keep
   the pilot fee they booked with.
 * **New booking alerts:** every team member gets an email for each new booking (each person can switch theirs off).

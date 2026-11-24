@@ -17,8 +17,8 @@ const STEPS = [
     readout: "PLAN",
   },
   {
-    title: "Get your price, then pay",
-    body: "We check the details and send your price. Pay a deposit to hold the date, the rest before the shoot.",
+    title: "See your price, then pay",
+    body: "Book the full day or by the hour and see your price as you book. Pay a deposit to hold the date, the rest before the shoot.",
     readout: "CONFIRM",
   },
   {

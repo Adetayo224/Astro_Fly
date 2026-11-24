@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { FULL_DAY, hoursFrom } from "./site"
 
 export const EVENT_TYPES = [
   "Wedding",
@@ -11,7 +12,6 @@ export const EVENT_TYPES = [
   "Other",
 ] as const
 
-export const DURATIONS = ["1 hour", "2 hours", "3 hours", "Half day", "Full day", "Custom"] as const
 
 export const DELIVERABLES = [
   { id: "photos", label: "Photos" },
@@ -64,7 +64,10 @@ export const eventSchema = z.object({
     .min(1, "Pick the event date")
     .refine((v) => v >= todayISO(), "The date cannot be in the past"),
   start_time: z.string().min(1, "Pick a start time"),
-  duration: z.string().min(1, "How long should we fly?"),
+  duration: z
+    .string()
+    .min(1, "Choose full day or by the hour")
+    .refine((v) => v === FULL_DAY || (hoursFrom(v) ?? 0) >= 1, "Choose full day or by the hour"),
   custom_duration: z.string().trim().max(80).optional(),
   venue_name: z.string().trim().min(2, "Enter the venue name").max(160),
   address: z.string().trim().min(5, "Enter the full address").max(300),

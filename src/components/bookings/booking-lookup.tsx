@@ -189,7 +189,7 @@ export function BookingLookup() {
                   </dl>
                   {canPay && !b.price && b.amount_paid === 0 && (
                     <p className="mt-4 text-[13px] leading-relaxed text-subtle">
-                      Your price is on the way. You can hold the date now with {formatNaira(pricing.depositNaira + b.pilot_fee)}{" "}
+                      Your price is on the way. You can hold the date now with {formatNaira(Math.min(pricing.depositNaira + b.pilot_fee, b.price || Infinity))}{" "}
                       using the bank details below.
                     </p>
                   )}

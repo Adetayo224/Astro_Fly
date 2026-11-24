@@ -6,7 +6,7 @@ import type { BookingEvent, BookingStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 const FLOW: { id: BookingStatus; label: string; body: string }[] = [
-  { id: "pending", label: "Received", body: "We have your details and are preparing your price." },
+  { id: "pending", label: "Received", body: "We have your details and are checking your date." },
   { id: "confirmed", label: "Confirmed", body: "Your pilot and drone are reserved for the date." },
   { id: "paid", label: "Paid", body: "Payment complete. We plan the shots with you." },
   { id: "completed", label: "Delivered", body: "The shoot is done and your files are on their way." },

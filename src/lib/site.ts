@@ -31,12 +31,49 @@ export const site = {
 export interface Pricing {
   depositNaira: number
   pilotFeeNaira: number
+  /** Whole event, any length */
+  fullDayNaira: number
+  /** Per hour when they do not book the full day */
+  hourlyNaira: number
+  /** Hourly bookings are charged for at least this many hours */
+  minHours: number
 }
-export const DEFAULT_PRICING: Pricing = { depositNaira: site.depositNaira, pilotFeeNaira: site.pilotFeeNaira }
+export const DEFAULT_PRICING: Pricing = {
+  depositNaira: site.depositNaira,
+  pilotFeeNaira: site.pilotFeeNaira,
+  fullDayNaira: 50000,
+  hourlyNaira: 5000,
+  minHours: 4,
+}
 
-/** What the customer pays to hold the date: the deposit plus the pilot fee if we provide the pilot. */
-export function upfrontNaira(needsPilot: boolean, pricing: Pricing = DEFAULT_PRICING) {
-  return pricing.depositNaira + (needsPilot ? pricing.pilotFeeNaira : 0)
+export const FULL_DAY = "Full day"
+export const MAX_HOURS = 12
+
+/** "3 hours" -> 3, "Full day" -> null */
+export function hoursFrom(duration: string): number | null {
+  const m = /^(\d{1,2}) hours?$/.exec(duration.trim())
+  return m ? Number(m[1]) : null
+}
+export const hoursLabel = (h: number) => `${h} hour${h === 1 ? "" : "s"}`
+
+/** Shoot price before any pilot fee. Hourly bookings pay for at least minHours and never more than a full day. */
+export function shootPrice(duration: string, p: Pricing): number | null {
+  if (duration === FULL_DAY) return p.fullDayNaira
+  const h = hoursFrom(duration)
+  if (!h) return null
+  return Math.min(Math.max(h, p.minHours) * p.hourlyNaira, p.fullDayNaira)
+}
+
+/** Full price of a booking: the shoot plus the pilot fee when we provide the pilot. */
+export function bookingTotal(duration: string, needsPilot: boolean, p: Pricing): number | null {
+  const shoot = shootPrice(duration, p)
+  return shoot === null ? null : shoot + (needsPilot ? p.pilotFeeNaira : 0)
+}
+
+/** What the customer pays to hold the date: the deposit plus the pilot fee if we provide the pilot, capped at the total. */
+export function upfrontNaira(needsPilot: boolean, pricing: Pricing = DEFAULT_PRICING, total?: number | null) {
+  const due = pricing.depositNaira + (needsPilot ? pricing.pilotFeeNaira : 0)
+  return total ? Math.min(due, total) : due
 }
 
 export function whatsappLink(message?: string) {

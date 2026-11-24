@@ -4,6 +4,7 @@ import type { BookingData } from "@/lib/booking-schema"
 import { DRONES } from "@/lib/drones"
 import type { Booking, BookingEvent, BookingStatus } from "@/lib/types"
 import { mockDB } from "./mock-store"
+import { bookingTotal } from "@/lib/site"
 import { getPricing } from "./settings"
 import { supabaseAdmin, T } from "./supabase"
 
@@ -23,6 +24,7 @@ export async function createBooking(input: BookingData): Promise<Booking> {
   const sb = supabaseAdmin()
   const now = new Date().toISOString()
   const id = randomUUID()
+  const pricing = await getPricing()
 
   const row: Omit<Booking, "reference"> = {
     id,
@@ -46,12 +48,13 @@ export async function createBooking(input: BookingData): Promise<Booking> {
     drone_name: droneName(input.drone_slug),
     deliverables: input.deliverables,
     needs_pilot: input.has_pilot === "no",
-    pilot_fee: input.has_pilot === "no" ? (await getPricing()).pilotFeeNaira : 0,
+    pilot_fee: input.has_pilot === "no" ? pricing.pilotFeeNaira : 0,
     pilot_name: null,
     pilot_phone: null,
     notes: input.notes || null,
     pay_option: input.pay_option,
-    price: null,
+    // Quoted from the dashboard prices; the team can still change it on the booking
+    price: bookingTotal(input.duration, input.has_pilot === "no", pricing),
     amount_paid: 0,
     payment_reference: null,
     admin_note: null,
