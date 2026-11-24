@@ -5,6 +5,7 @@ import { Providers } from "@/components/shell/providers"
 import { TopBar } from "@/components/shell/top-bar"
 import { WhatsAppFab } from "@/components/shell/whatsapp-fab"
 import { getDrones } from "@/lib/server/drones"
+import { getPricing } from "@/lib/server/settings"
 import { site } from "@/lib/site"
 import "./globals.css"
 
@@ -45,7 +46,7 @@ export const viewport: Viewport = {
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const drones = await getDrones()
+  const [drones, pricing] = await Promise.all([getDrones(), getPricing()])
   return (
     <html
       lang="en-NG"
@@ -53,7 +54,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-svh">
-        <Providers drones={drones}>
+        <Providers drones={drones} pricing={pricing}>
           <TopBar />
           <main id="main">{children}</main>
           <BottomTabs />

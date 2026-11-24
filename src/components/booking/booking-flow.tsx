@@ -19,9 +19,10 @@ import {
   type BookingInput,
 } from "@/lib/booking-schema"
 import { deliverableLabels, formatEventDate, formatTime } from "@/lib/format"
-import { formatNaira, site, upfrontNaira } from "@/lib/site"
+import { formatNaira, upfrontNaira } from "@/lib/site"
 import type { Drone } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { useBooking } from "./booking-provider"
 import { Calendar, TimePicker } from "./date-time"
 import { CheckRow, Chip, Field, Segmented, SelectInput, TextArea, TextInput } from "./fields"
 import { SuccessScreen, type SuccessData } from "./success-screen"
@@ -73,6 +74,7 @@ export function BookingFlow({
   onDone?: () => void
   onClose?: () => void
 }) {
+  const { pricing } = useBooking()
   const available = useMemo(() => drones.filter((d) => d.status === "available"), [drones])
   const [step, setStep] = useState(draft.step)
   const [dir, setDir] = useState(1)
@@ -114,7 +116,7 @@ export function BookingFlow({
   const whatsappSame = watch("whatsapp_same")
   const duration = watch("duration")
   const hasPilot = watch("has_pilot")
-  const dueNow = upfrontNaira(hasPilot === "no")
+  const dueNow = upfrontNaira(hasPilot === "no", pricing)
 
   const scrollTop = () => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
 
@@ -532,7 +534,7 @@ export function BookingFlow({
                               icon: UsersRound,
                               title: "No, match me with an Astro_Fly pilot",
                               body: "We pick a trained pilot for your event and send you their name and number.",
-                              fee: `+${formatNaira(site.pilotFeeNaira)}`,
+                              fee: `+${formatNaira(pricing.pilotFeeNaira)}`,
                             },
                           ].map((o) => {
                             const on = field.value === o.id
@@ -606,7 +608,7 @@ export function BookingFlow({
                     <Row k="Deliverables" v={deliverableLabels(v.deliverables || []).join(", ")} />
                     <Row
                       k="Pilot"
-                      v={v.has_pilot === "no" ? `Astro_Fly pilot (+${formatNaira(site.pilotFeeNaira)})` : "My own pilot"}
+                      v={v.has_pilot === "no" ? `Astro_Fly pilot (+${formatNaira(pricing.pilotFeeNaira)})` : "My own pilot"}
                     />
                     {v.notes ? <Row k="Notes" v={v.notes} /> : null}
                   </Summary>
@@ -637,7 +639,7 @@ export function BookingFlow({
                               title: `Pay ${formatNaira(dueNow)} now`,
                               body:
                                 hasPilot === "no"
-                                  ? `${formatNaira(site.depositNaira)} to hold your date plus ${formatNaira(site.pilotFeeNaira)} for your pilot, by bank transfer to Samfred Robotics. We confirm it by email.`
+                                  ? `${formatNaira(pricing.depositNaira)} to hold your date plus ${formatNaira(pricing.pilotFeeNaira)} for your pilot, by bank transfer to Samfred Robotics. We confirm it by email.`
                                   : "By bank transfer to Samfred Robotics. Your date is held once we confirm it by email, and it comes off your final price.",
                             },
                             {

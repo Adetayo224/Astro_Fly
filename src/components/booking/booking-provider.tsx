@@ -1,6 +1,7 @@
 "use client"
 import dynamic from "next/dynamic"
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react"
+import type { Pricing } from "@/lib/site"
 import type { Drone } from "@/lib/types"
 
 const BookingSheet = dynamic(() => import("./booking-sheet").then((m) => m.BookingSheet), { ssr: false })
@@ -9,6 +10,8 @@ interface Ctx {
   openBooking: (droneSlug?: string) => void
   closeBooking: () => void
   drones: Drone[]
+  /** Deposit and pilot fee as set in the dashboard */
+  pricing: Pricing
 }
 
 const BookingContext = createContext<Ctx | null>(null)
@@ -19,7 +22,15 @@ export function useBooking() {
   return ctx
 }
 
-export function BookingProvider({ drones, children }: { drones: Drone[]; children: ReactNode }) {
+export function BookingProvider({
+  drones,
+  pricing,
+  children,
+}: {
+  drones: Drone[]
+  pricing: Pricing
+  children: ReactNode
+}) {
   // The form survives an accidental close. It only resets after a booking is completed.
   const [state, setState] = useState<{ open: boolean; slug?: string; key: number; done: boolean }>({
     open: false,
@@ -35,7 +46,9 @@ export function BookingProvider({ drones, children }: { drones: Drone[]; childre
   const closeBooking = useCallback(() => setState((s) => ({ ...s, open: false })), [])
   const markDone = useCallback(() => setState((s) => ({ ...s, done: true })), [])
 
-  const value = useMemo(() => ({ openBooking, closeBooking, drones }), [openBooking, closeBooking, drones])
+  const value = useMemo(() => ({ openBooking, closeBooking, drones, pricing }),
+    [openBooking, closeBooking, drones, pricing],
+  )
 
   return (
     <BookingContext.Provider value={value}>

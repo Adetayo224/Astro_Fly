@@ -4,6 +4,8 @@ import { upfrontNaira } from "@/lib/site"
 import { createBooking } from "@/lib/server/bookings"
 import { getDrones } from "@/lib/server/drones"
 import { sendBookingEmails } from "@/lib/server/email"
+import { pushToTeam } from "@/lib/server/push"
+import { getPricing } from "@/lib/server/settings"
 
 export async function POST(req: Request) {
   let form: FormData
@@ -36,13 +38,22 @@ export async function POST(req: Request) {
 
   try {
     const booking = await createBooking(data)
-    await sendBookingEmails(booking)
+    const [, pricing] = await Promise.all([
+      sendBookingEmails(booking),
+      getPricing(),
+      pushToTeam({
+        title: `New booking ${booking.reference}`,
+        body: `${booking.full_name}: ${booking.event_type} on ${booking.event_date} in ${booking.city}${booking.needs_pilot ? ", needs a pilot" : ""}`,
+        url: `/admin?booking=${booking.reference}`,
+        tag: `booking-${booking.reference}`,
+      }).catch((e) => console.error("[push]", e)),
+    ])
     return NextResponse.json({
       reference: booking.reference,
       email: booking.email,
       pay_option: booking.pay_option,
       needs_pilot: booking.needs_pilot,
-      amount_due: upfrontNaira(booking.needs_pilot),
+      amount_due: upfrontNaira(booking.needs_pilot, pricing),
     })
   } catch (e) {
     console.error("[bookings] create failed", e)

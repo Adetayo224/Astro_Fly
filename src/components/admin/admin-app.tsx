@@ -1,12 +1,14 @@
 "use client"
 import { AnimatePresence, motion } from "framer-motion"
 import { Loader2, LogOut, RefreshCw, Search } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
-import { Logo } from "@/components/brand/logo"
+import Link from "next/link"
+import { Logo, LogoMark } from "@/components/brand/logo"
 import { CheckRow, Field, PasswordInput, TextArea, TextInput } from "@/components/booking/fields"
 import { CountUp } from "@/components/home/count-up"
 import { ThemeToggle } from "@/components/shell/theme-toggle"
+import { SettingsPanel } from "./settings-panel"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -184,8 +186,9 @@ function Dashboard({ token, email, onSignOut }: { token: string; email: string; 
   const [q, setQ] = useState("")
   const [selected, setSelected] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
-  const [tab, setTab] = useState<"bookings" | "team">("bookings")
+  const [tab, setTab] = useState<"bookings" | "team" | "settings">("bookings")
   const [me, setMe] = useState<{ email: string; role: "owner" | "admin" } | null>(null)
+  const seenIds = useRef<Set<string> | null>(null)
 
   useEffect(() => {
     fetch("/api/admin/me", { headers: { Authorization: `Bearer ${token}` } })
@@ -202,8 +205,23 @@ function Dashboard({ token, email, onSignOut }: { token: string; email: string; 
         onSignOut()
         return
       }
-      const json = await res.json()
+      const json = (await res.json()) as { bookings: Booking[] }
+      const seen = seenIds.current
+      if (seen) {
+        const fresh = json.bookings.filter((b) => !seen.has(b.id))
+        if (fresh.length === 1) toast.success(`New booking from ${fresh[0].full_name} (${fresh[0].reference})`)
+        else if (fresh.length > 1) toast.success(`${fresh.length} new bookings`)
+      }
+      seenIds.current = new Set(json.bookings.map((b) => b.id))
       setBookings(json.bookings)
+      // Tapping an alert opens /admin?booking=REFERENCE
+      const ref = new URLSearchParams(window.location.search).get("booking")
+      const hit = ref && json.bookings.find((b) => b.reference === ref.toUpperCase())
+      if (hit) {
+        setTab("bookings")
+        setSelected(hit.id)
+        window.history.replaceState(null, "", "/admin")
+      }
     } catch {
       toast.error("Could not load bookings")
     }
@@ -217,7 +235,18 @@ function Dashboard({ token, email, onSignOut }: { token: string; email: string; 
 
   useEffect(() => {
     void Promise.resolve().then(fetchList)
+    // Check for new bookings every minute while the dashboard is open and visible
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void fetchList()
+    }, 60_000)
+    const onShow = () => document.visibilityState === "visible" && void fetchList()
+    document.addEventListener("visibilitychange", onShow)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener("visibilitychange", onShow)
+    }
   }, [fetchList])
+
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: bookings?.length ?? 0 }
@@ -241,16 +270,19 @@ function Dashboard({ token, email, onSignOut }: { token: string; email: string; 
   return (
     <div className="min-h-svh">
       <header className="sticky top-0 z-40 border-b border-line bg-bg/80 pt-safe backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-5 md:px-8">
-          <Logo compact />
-          <nav className="ml-3 flex rounded-full border border-line bg-surface p-1" aria-label="Dashboard sections">
-            {(["bookings", "team"] as const).map((t) => (
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-3 md:px-8">
+          <Logo compact className="hidden sm:flex" />
+          <Link href="/" aria-label="Astro_Fly home" className="shrink-0 sm:hidden">
+            <LogoMark />
+          </Link>
+          <nav className="ml-1 flex rounded-full border border-line bg-surface p-1 md:ml-3" aria-label="Dashboard sections">
+            {(["bookings", "team", "settings"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 aria-current={tab === t ? "page" : undefined}
                 className={cn(
-                  "relative h-8 rounded-full px-3.5 text-[13px] font-medium capitalize transition-colors",
+                  "relative h-8 rounded-full px-2.5 text-[12.5px] font-medium capitalize transition-colors sm:px-3.5 sm:text-[13px]",
                   tab === t ? "text-ink" : "text-subtle hover:text-fg",
                 )}
               >
@@ -261,22 +293,25 @@ function Dashboard({ token, email, onSignOut }: { token: string; email: string; 
               </button>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="hidden text-[13px] text-subtle md:inline">{email}</span>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <span className="hidden text-[13px] text-subtle lg:inline">{email}</span>
             <ThemeToggle />
             <button
               onClick={onSignOut}
               aria-label="Sign out"
-              className="grid size-10 place-items-center rounded-full border border-line transition hover:border-signal/50 active:scale-90"
+              className="flex h-10 items-center gap-2 rounded-full border border-line px-3 text-[13px] font-medium transition hover:border-signal/50 active:scale-95"
             >
               <LogOut className="size-4" />
+              <span className="hidden sm:inline">Sign out</span>
             </button>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-8">
-        {tab === "team" ? (
+        {tab === "settings" ? (
+          <SettingsPanel token={token} me={me} email={email} onSignOut={onSignOut} />
+        ) : tab === "team" ? (
           <TeamPanel token={token} me={me} />
         ) : (
         <>

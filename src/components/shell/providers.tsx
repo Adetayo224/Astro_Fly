@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes"
 import { useEffect, type ReactNode } from "react"
 import { Toaster } from "sonner"
 import { BookingProvider } from "@/components/booking/booking-provider"
+import type { Pricing } from "@/lib/site"
 import type { Drone } from "@/lib/types"
 import { InstallApp } from "./install-app"
 import { SmoothScroll } from "./smooth-scroll"
@@ -16,7 +17,7 @@ function ServiceWorker() {
   return null
 }
 
-export function Providers({ drones, children }: { drones: Drone[]; children: ReactNode }) {
+export function Providers({ drones, pricing, children }: { drones: Drone[]; pricing: Pricing; children: ReactNode }) {
   return (
     <ThemeProvider
       attribute="class"
@@ -27,7 +28,7 @@ export function Providers({ drones, children }: { drones: Drone[]; children: Rea
       disableTransitionOnChange
     >
       <MotionConfig reducedMotion="user">
-        <BookingProvider drones={drones}>
+        <BookingProvider drones={drones} pricing={pricing}>
           <SmoothScroll />
           <ServiceWorker />
           {children}

@@ -14,6 +14,8 @@ import TeamAlertEmail from "@/emails/team-alert"
 import { site } from "@/lib/site"
 import type { Booking } from "@/lib/types"
 import { env, hasMailer, hasSmtp } from "./env"
+import { getPricing } from "./settings"
+import { supabaseAdmin, T } from "./supabase"
 
 let resend: Resend | null = null
 let smtp: Transporter | null = null
@@ -77,27 +79,37 @@ async function safe<T>(fn: () => Promise<T>) {
   }
 }
 
-export function sendBookingEmails(booking: Booking) {
+/** Everyone who should hear about a new booking: team members with email alerts on, plus TEAM_EMAIL. */
+async function teamAlertRecipients(): Promise<string[]> {
+  const list = new Set<string>()
+  const sb = supabaseAdmin()
+  if (sb) {
+    const { data } = await sb.from(T.team).select("email").eq("notify_email", true)
+    data?.forEach((m) => list.add(m.email.toLowerCase()))
+    // TEAM_EMAIL is only a fallback, so a team member who turns alerts off is respected
+    if (!data && env.teamEmail) list.add(env.teamEmail.toLowerCase())
+  } else {
+    list.add(env.teamEmail || "team@mock.local")
+  }
+  return [...list]
+}
+
+export async function sendBookingEmails(booking: Booking) {
   const siteUrl = site.url
+  const pricing = await getPricing()
+  const team = await teamAlertRecipients()
+  const subject = `New booking ${booking.reference}: ${booking.event_type} on ${booking.event_date}`
   return Promise.all([
     safe(() =>
       send(
         booking.email,
         `Booking received: ${booking.reference}`,
-        BookingConfirmationEmail({ booking, siteUrl, depositNaira: site.depositNaira }),
+        BookingConfirmationEmail({ booking, siteUrl, depositNaira: pricing.depositNaira }),
         "confirmation",
       ),
     ),
-    env.teamEmail
-      ? safe(() =>
-          send(
-            env.teamEmail,
-            `New booking ${booking.reference}: ${booking.event_type} on ${booking.event_date}`,
-            TeamAlertEmail({ booking, siteUrl }),
-            "team",
-          ),
-        )
-      : safe(() => send("team@mock.local", `New booking ${booking.reference}`, TeamAlertEmail({ booking, siteUrl }), "team")),
+    // Replies to the alert go to the customer
+    ...team.map((to) => safe(() => send(to, subject, TeamAlertEmail({ booking, siteUrl }), "team", booking.email))),
   ])
 }
 

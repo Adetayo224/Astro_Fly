@@ -7,17 +7,19 @@ import { Field, TextInput } from "@/components/booking/fields"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { deliverableLabels, formatEventDate, formatTime } from "@/lib/format"
-import { formatNaira, upfrontNaira, whatsappLink } from "@/lib/site"
+import { formatNaira, whatsappLink } from "@/lib/site"
 import { STATUS_LABEL, type Booking, type BookingEvent } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { StatusTimeline } from "./status-timeline"
 import { BankDetailsCard } from "@/components/booking/bank-details"
+import { useBooking } from "@/components/booking/booking-provider"
 
 type PublicBooking = Omit<Booking, "admin_note" | "flyer_path">
 const STORE = "astrofly-last-booking"
 
 export function BookingLookup() {
   const params = useSearchParams()
+  const { pricing } = useBooking()
   const [email, setEmail] = useState("")
   const [reference, setReference] = useState(params.get("ref") ?? "")
   const [loading, setLoading] = useState(false)
@@ -187,7 +189,7 @@ export function BookingLookup() {
                   </dl>
                   {canPay && !b.price && b.amount_paid === 0 && (
                     <p className="mt-4 text-[13px] leading-relaxed text-subtle">
-                      Your price is on the way. You can hold the date now with {formatNaira(upfrontNaira(b.needs_pilot))}{" "}
+                      Your price is on the way. You can hold the date now with {formatNaira(pricing.depositNaira + b.pilot_fee)}{" "}
                       using the bank details below.
                     </p>
                   )}
@@ -239,7 +241,7 @@ export function BookingLookup() {
               {canPay && ((balance !== null && balance > 0) || (!b.price && b.amount_paid === 0)) && (
                 <BankDetailsCard
                   reference={b.reference}
-                  amount={balance !== null && balance > 0 ? balance : upfrontNaira(b.needs_pilot)}
+                  amount={balance !== null && balance > 0 ? balance : pricing.depositNaira + b.pilot_fee}
                   title={balance !== null && balance > 0 ? "Pay your balance" : "Hold your date with a deposit"}
                 />
               )}

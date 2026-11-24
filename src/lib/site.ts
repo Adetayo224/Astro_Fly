@@ -27,9 +27,16 @@ export const site = {
   modelCredit: process.env.NEXT_PUBLIC_MODEL_CREDIT || "",
 } as const
 
+/** Prices the team can change in the dashboard (Settings). The env values are only the defaults. */
+export interface Pricing {
+  depositNaira: number
+  pilotFeeNaira: number
+}
+export const DEFAULT_PRICING: Pricing = { depositNaira: site.depositNaira, pilotFeeNaira: site.pilotFeeNaira }
+
 /** What the customer pays to hold the date: the deposit plus the pilot fee if we provide the pilot. */
-export function upfrontNaira(needsPilot: boolean) {
-  return site.depositNaira + (needsPilot ? site.pilotFeeNaira : 0)
+export function upfrontNaira(needsPilot: boolean, pricing: Pricing = DEFAULT_PRICING) {
+  return pricing.depositNaira + (needsPilot ? pricing.pilotFeeNaira : 0)
 }
 
 export function whatsappLink(message?: string) {

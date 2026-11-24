@@ -39,8 +39,8 @@ All keys live in `.env.local`, which is never committed. `.env.example` lists ev
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Your live URL | Links in emails |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | `orders@samfredrobotics.com` | Shown on the site |
-| `NEXT_PUBLIC_DEPOSIT_NGN` | Your choice (default `20000`) | Amount to hold the date |
-| `NEXT_PUBLIC_PILOT_FEE_NGN` | Your choice (default `10000`) | Added when we provide the pilot |
+| `NEXT_PUBLIC_DEPOSIT_NGN` | Default `20000` | Starting deposit; change it later in the dashboard Settings |
+| `NEXT_PUBLIC_PILOT_FEE_NGN` | Default `10000` | Starting pilot fee; change it later in the dashboard Settings |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase > Project settings > API | Database, storage, admin login |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase > Project settings > API | Admin login in the browser |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase > Project settings > API (secret) | Server routes only |
@@ -49,6 +49,7 @@ All keys live in `.env.local`, which is never committed. `.env.example` lists ev
 | `EMAIL_FROM` | `Astro_Fly <orders@samfredrobotics.com>` | From address (domain must be verified in Resend) |
 | `TEAM_EMAIL` | `orders@samfredrobotics.com` | New booking alerts and replies |
 | `ADMIN_EMAILS` | Optional, comma separated | Extra owners outside the team table |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys` | Phone and computer alerts for the team |
 | `NEXT_PUBLIC_MODEL_CREDIT` | Author line for a CC BY 3D model | Footer credit |
 
 ---
@@ -58,7 +59,8 @@ All keys live in `.env.local`, which is never committed. `.env.example` lists ev
 The app uses the **Samfred Robotics Website** Supabase project, which other Samfred apps share. So every
 Astro_Fly object is prefixed and nothing else in the project is touched:
 
-* Tables: `astrofly_drones`, `astrofly_bookings`, `astrofly_booking_events`, `astrofly_notify_me`, `astrofly_team`
+* Tables: `astrofly_drones`, `astrofly_bookings`, `astrofly_booking_events`, `astrofly_notify_me`, `astrofly_team`,
+  `astrofly_settings` (prices), `astrofly_push_subscriptions` (alert devices)
 * Functions: `astrofly_is_team()`, `astrofly_touch_updated_at()`
 * Storage bucket: `astrofly-flyers` (private, no longer used)
 
@@ -85,6 +87,19 @@ private and shown to the team through short lived signed links.
   `https://YOUR_DOMAIN/**` under Supabase > Authentication > URL Configuration > Redirect URLs.
 
 ---
+
+## 4b. Settings and new booking alerts
+
+The **Settings** tab in the dashboard has:
+
+* **Prices:** the deposit to hold a date and the pilot fee. Use the minus and plus buttons (steps of ₦5,000) or type
+  an amount, then Save. The booking form and My Bookings use the new prices straight away. Bookings already made keep
+  the pilot fee they booked with.
+* **New booking alerts:** every team member gets an email for each new booking (each person can switch theirs off).
+  **Turn on alerts on this device** adds a pop up alert on that phone or computer, even when the dashboard is closed.
+  On iPhone this only works from the installed app (Share, Add to Home Screen), on iOS 16.4 or newer.
+  The open dashboard also checks for new bookings every minute.
+* **Your account:** change your password and sign out. There is also a Sign out button at the top right.
 
 ## 5. Pilots
 
@@ -176,6 +191,8 @@ https://sketchfab.com/3d-models/a67e84ebcec145818e122cdf40705fb0 as `.glb`, save
    | `SMTP_USER` | `resend` |
    | `SMTP_PASS` | your Resend API key |
    | `RESEND_API_KEY` | your Resend API key |
+   | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | from `.env.local` |
+   | `VAPID_PRIVATE_KEY` | from `.env.local` (secret) |
 
 4. Click **Deploy**. When it finishes, copy the live URL. If it differs from what you put in
    `NEXT_PUBLIC_SITE_URL`, fix that variable and redeploy (Deployments > ... > Redeploy).

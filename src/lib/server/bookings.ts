@@ -4,7 +4,7 @@ import type { BookingData } from "@/lib/booking-schema"
 import { DRONES } from "@/lib/drones"
 import type { Booking, BookingEvent, BookingStatus } from "@/lib/types"
 import { mockDB } from "./mock-store"
-import { site } from "@/lib/site"
+import { getPricing } from "./settings"
 import { supabaseAdmin, T } from "./supabase"
 
 const REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -46,7 +46,7 @@ export async function createBooking(input: BookingData): Promise<Booking> {
     drone_name: droneName(input.drone_slug),
     deliverables: input.deliverables,
     needs_pilot: input.has_pilot === "no",
-    pilot_fee: input.has_pilot === "no" ? site.pilotFeeNaira : 0,
+    pilot_fee: input.has_pilot === "no" ? (await getPricing()).pilotFeeNaira : 0,
     pilot_name: null,
     pilot_phone: null,
     notes: input.notes || null,

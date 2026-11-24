@@ -3,6 +3,7 @@ import { z } from "zod"
 import { site, upfrontNaira } from "@/lib/site"
 import { getBookingByReference } from "@/lib/server/bookings"
 import { initializePayment } from "@/lib/server/paystack"
+import { getPricing } from "@/lib/server/settings"
 
 const schema = z.object({
   reference: z.string().trim().toUpperCase(),
@@ -23,10 +24,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "This booking cannot take payments" }, { status: 409 })
   }
 
+  const pricing = await getPricing()
   let amount: number
   if (kind === "deposit") {
     if (booking.amount_paid > 0) return NextResponse.json({ error: "Deposit already paid" }, { status: 409 })
-    amount = booking.price ? Math.min(upfrontNaira(booking.needs_pilot), booking.price) : upfrontNaira(booking.needs_pilot)
+    amount = booking.price ? Math.min(upfrontNaira(booking.needs_pilot, pricing), booking.price) : upfrontNaira(booking.needs_pilot, pricing)
   } else {
     if (!booking.price) return NextResponse.json({ error: "Your price has not been set yet" }, { status: 409 })
     amount = booking.price - booking.amount_paid
