@@ -16,7 +16,7 @@ const NON_COPY_ATTRS = new Set([
   "strokeLinejoin", "style", "data-testid", "preserveAspectRatio", "transform", "mode", "variant", "size",
   "as", "align", "position", "attribute", "defaultTheme", "storageKey", "color", "form", "lang",
   "autoCapitalize", "content", "property", "x", "y", "width", "height", "aria-hidden", "dur", "repeatCount",
-  "rotate", "strokeDasharray", "query",
+  "rotate", "strokeDasharray", "query", "allow", "sizes",
 ])
 const NON_COPY_KEYS = new Set([
   "id", "slug", "image", "href", "icon", "src", "category", "status", "code", "url", "path", "span",

@@ -79,7 +79,6 @@ async function DroneDetail({ params }: { params: PageProps<"/drones/[slug]">["pa
         <div className="mt-6 grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
           {/* Visual */}
           <div className="relative min-w-0 overflow-hidden rounded-[32px] border border-line bg-surface lg:sticky lg:top-28 lg:self-start">
-            <div className="hud-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_75%)]" />
             <div
               className={cn(
                 "absolute top-1/2 left-1/2 size-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[80px]",

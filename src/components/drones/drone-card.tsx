@@ -27,12 +27,6 @@ export function DroneCard({ drone, priority, className }: { drone: Drone; priori
       <div className="pointer-events-none relative aspect-[4/3] overflow-hidden">
         <div
           className={cn(
-            "absolute inset-0 hud-grid opacity-70",
-            "[mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_75%)]",
-          )}
-        />
-        <div
-          className={cn(
             "absolute top-1/2 left-1/2 size-[60%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl transition-opacity duration-500",
             soon ? "bg-fg/5" : "bg-signal/15 group-hover:bg-signal/25",
           )}

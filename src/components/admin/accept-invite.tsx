@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Logo } from "@/components/brand/logo"
-import { Field, TextInput } from "@/components/booking/fields"
+import { Field, PasswordInput } from "@/components/booking/fields"
 import { SuccessCheck } from "@/components/booking/success-screen"
 import { Button, ButtonLink } from "@/components/ui/button"
 import { supabaseBrowser } from "@/lib/supabase-browser"
@@ -71,7 +71,6 @@ export function AcceptInvite() {
 
   return (
     <div className="relative grid min-h-svh place-items-center px-5">
-      <div className="hud-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -101,10 +100,10 @@ export function AcceptInvite() {
               For <span className="text-fg">{email}</span>. You will use it to sign in to the Astro_Fly dashboard.
             </p>
             <Field label="New password" htmlFor="np">
-              <TextInput id="np" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <PasswordInput id="np" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
             <Field label="Type it again" htmlFor="np2">
-              <TextInput id="np2" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+              <PasswordInput id="np2" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </Field>
             {error && <p className="text-[13px] text-destructive">{error}</p>}
             <Button type="submit" size="xl" block disabled={saving}>

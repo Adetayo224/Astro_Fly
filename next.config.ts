@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   // Without this, Next blocks its dev scripts for those devices and the page never hydrates.
   allowedDevOrigins: ["10.*.*.*", "192.168.*.*", "172.*.*.*", "*.local"],
   partialPrefetching: true,
+  images: {
+    // YouTube thumbnails for the featured videos
+    remotePatterns: [{ protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" }],
+  },
   turbopack: {
     rules: {
       "*.css": {

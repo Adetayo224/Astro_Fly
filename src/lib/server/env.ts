@@ -7,6 +7,10 @@ export const env = {
   resendKey: process.env.RESEND_API_KEY || "",
   emailFrom: process.env.EMAIL_FROM || "Astro_Fly <bookings@astrofly.ng>",
   teamEmail: process.env.TEAM_EMAIL || "",
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: Number(process.env.SMTP_PORT || 465),
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
   paystackSecret: process.env.PAYSTACK_SECRET_KEY || "",
   adminEmails: (process.env.ADMIN_EMAILS || "")
     .split(",")
@@ -15,5 +19,8 @@ export const env = {
 }
 
 export const hasSupabase = Boolean(env.supabaseUrl && env.supabaseService)
+export const hasSmtp = Boolean(env.smtpHost && env.smtpUser && env.smtpPass)
 export const hasResend = Boolean(env.resendKey)
+/** True when real emails can go out (SMTP first, Resend API as fallback) */
+export const hasMailer = hasSmtp || hasResend
 export const hasPaystack = Boolean(env.paystackSecret)

@@ -22,7 +22,6 @@ export function Reviews() {
       ) : (
         <Reveal className="mt-10">
           <RevealItem className="relative overflow-hidden rounded-[28px] border border-dashed border-fg/15 p-8 md:p-12">
-            <div className="hud-grid absolute inset-0 opacity-50 [mask-image:linear-gradient(to_right,transparent,black)]" />
             <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
                 <span className="grid size-14 shrink-0 place-items-center rounded-2xl border border-line bg-surface text-signal-ink">

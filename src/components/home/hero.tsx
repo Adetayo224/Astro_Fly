@@ -165,14 +165,7 @@ export function Hero({ modelUrl }: { modelUrl?: string }) {
         </div>
         <SceneLoader done={ready} />
 
-        {/* Grid and texture over the stage, faded around the drone */}
-        <div
-          className="hud-grid pointer-events-none absolute inset-0"
-          style={{
-            maskImage: "radial-gradient(ellipse 60% 55% at 50% 42%, transparent 30%, black 85%)",
-            WebkitMaskImage: "radial-gradient(ellipse 60% 55% at 50% 42%, transparent 30%, black 85%)",
-          }}
-        />
+        {/* Texture over the stage */}
         <div className="noise pointer-events-none absolute inset-0" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-bg to-transparent" />
 

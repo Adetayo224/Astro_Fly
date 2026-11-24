@@ -42,7 +42,8 @@ All keys live in `.env.local`, which is never committed. `.env.example` lists ev
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase > Project settings > API | Database, storage, admin login |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase > Project settings > API | Admin login in the browser |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase > Project settings > API (secret) | Server routes only |
-| `RESEND_API_KEY` | resend.com > API Keys | Sending email |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Resend SMTP: `smtp.resend.com`, `465`, `resend`, your Resend API key | Sending email (used first) |
+| `RESEND_API_KEY` | resend.com > API Keys | Sending email (fallback if SMTP fails) |
 | `EMAIL_FROM` | `Astro_Fly <orders@samfredrobotics.com>` | From address (domain must be verified in Resend) |
 | `TEAM_EMAIL` | `orders@samfredrobotics.com` | New booking alerts and replies |
 | `ADMIN_EMAILS` | Optional, comma separated | Extra owners outside the team table |
@@ -108,8 +109,10 @@ Sent through Resend from `orders@samfredrobotics.com`:
 * Payment receipts when the team records a transfer
 * Free messages written in the dashboard under **Write to the customer**
 
-To switch sending on, create an API key at resend.com (the samfredrobotics.com domain is already verified there,
-since Supabase uses it) and set `RESEND_API_KEY` in `.env.local`. Templates are in `src/emails/`.
+Emails go out over **SMTP through Resend** (`smtp.resend.com`, port 465, user `resend`, password = the Resend API
+key). If SMTP ever fails, the app retries through the Resend API with `RESEND_API_KEY`. The samfredrobotics.com
+domain is verified in Resend, and delivery to `orders@samfredrobotics.com` has been tested. Templates are in
+`src/emails/`. Without any email keys, emails are saved as HTML files in `.mock_emails/` instead.
 
 ---
 
@@ -139,10 +142,35 @@ https://sketchfab.com/3d-models/a67e84ebcec145818e122cdf40705fb0 as `.glb`, save
 
 ## 9. Deploy to Vercel
 
-1. Import https://github.com/Adetayo224/Astro_Fly on https://vercel.com.
-2. Add every variable from section 2 under Settings > Environment Variables, with `NEXT_PUBLIC_SITE_URL` set to
-   the live URL.
-3. Deploy, then add the live URL to the Supabase redirect list (section 4).
+1. Sign in at https://vercel.com with the GitHub account `Adetayo224`.
+2. **Add New > Project**, pick **Astro_Fly**, and keep the detected settings (Framework: Next.js, root `./`).
+3. Before clicking Deploy, open **Environment Variables** and add these (values are in your `.env.local`):
+
+   | Name | Value |
+   | --- | --- |
+   | `NEXT_PUBLIC_SITE_URL` | `https://YOUR_PROJECT.vercel.app` (or your own domain later) |
+   | `NEXT_PUBLIC_CONTACT_EMAIL` | `orders@samfredrobotics.com` |
+   | `NEXT_PUBLIC_DEPOSIT_NGN` | `20000` |
+   | `NEXT_PUBLIC_SUPABASE_URL` | from `.env.local` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | from `.env.local` |
+   | `SUPABASE_SERVICE_ROLE_KEY` | from `.env.local` (secret) |
+   | `EMAIL_FROM` | `Astro_Fly <orders@samfredrobotics.com>` |
+   | `TEAM_EMAIL` | `orders@samfredrobotics.com` |
+   | `SMTP_HOST` | `smtp.resend.com` |
+   | `SMTP_PORT` | `465` |
+   | `SMTP_USER` | `resend` |
+   | `SMTP_PASS` | your Resend API key |
+   | `RESEND_API_KEY` | your Resend API key |
+
+4. Click **Deploy**. When it finishes, copy the live URL. If it differs from what you put in
+   `NEXT_PUBLIC_SITE_URL`, fix that variable and redeploy (Deployments > ... > Redeploy).
+5. In Supabase: **Authentication > URL Configuration > Redirect URLs**, add `https://YOUR_PROJECT.vercel.app/**`
+   (this adds to the list; do not change the Site URL, which your main website uses). Invite and password links
+   then work on the live site.
+6. Optional: **Settings > Domains** in Vercel to use something like `astrofly.samfredrobotics.com`, then add that
+   domain to the Supabase Redirect URLs too and update `NEXT_PUBLIC_SITE_URL`.
+
+Every push to `main` on GitHub redeploys automatically.
 
 Production check locally: `npm run build && npm start`.
 
@@ -162,6 +190,8 @@ Production check locally: `npm run build && npm start`.
 ## Content you can add later
 
 * **Gallery:** photos in `public/gallery/`, listed in `src/lib/gallery.ts`.
+* **Videos:** the "Six moves" section shows two credited YouTube videos by other creators (`FEATURED_VIDEOS` in
+  `src/lib/gallery.ts`). Swap the ids for your own showreel when it is ready.
 * **Reviews:** real reviews in `src/lib/reviews.ts`.
 * **Drones:** edit the `astrofly_drones` table (status `available` or `coming_soon`).
 

@@ -67,7 +67,6 @@
   --signal-ink: #00ff85;
   --glass: rgb(17 20 18 / 0.55);
   --glass-border: rgb(245 247 245 / 0.09);
-  --grid-line: rgb(245 247 245 / 0.045);
   --glow: rgb(0 255 133 / 0.35);
 
   --card: #111412;
@@ -98,7 +97,6 @@
   --signal-ink: #00a35a;
   --glass: rgb(255 255 255 / 0.62);
   --glass-border: rgb(5 5 5 / 0.08);
-  --grid-line: rgb(5 5 5 / 0.05);
   --glow: rgb(0 200 105 / 0.28);
 
   --card: #f3f5f3;
@@ -165,12 +163,6 @@ html.lenis, html.lenis body { height: auto; }
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(22px) saturate(140%);
     -webkit-backdrop-filter: blur(22px) saturate(140%);
-  }
-  .hud-grid {
-    background-image:
-      linear-gradient(var(--grid-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 56px 56px;
   }
   .noise::after {
     content: "";

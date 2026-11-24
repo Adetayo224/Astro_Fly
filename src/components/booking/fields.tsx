@@ -1,7 +1,7 @@
 "use client"
 import { AnimatePresence, motion } from "framer-motion"
-import { Check, ChevronDown } from "lucide-react"
-import { forwardRef, useId, type ComponentProps, type ReactNode } from "react"
+import { Check, ChevronDown, Eye, EyeOff } from "lucide-react"
+import { forwardRef, useId, useState, type ComponentProps, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 export function Field({
@@ -227,5 +227,24 @@ export function CheckRow({
         {description && <span className="text-[13px] leading-relaxed text-subtle">{description}</span>}
       </span>
     </button>
+  )
+}
+
+/** Password field with an eye button to show or hide what was typed. */
+export function PasswordInput({ className, ...props }: Omit<ComponentProps<"input">, "type"> & { invalid?: boolean }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className="relative">
+      <TextInput {...props} type={show ? "text" : "password"} className={cn("pr-14", className)} />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        aria-label={show ? "Hide password" : "Show password"}
+        aria-pressed={show}
+        className="absolute top-1/2 right-2 grid size-10 -translate-y-1/2 place-items-center rounded-full text-subtle transition hover:text-fg active:scale-90"
+      >
+        {show ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+      </button>
+    </div>
   )
 }

@@ -237,7 +237,6 @@ export function BookingLookup() {
               exit={{ opacity: 0 }}
               className="relative grid h-full min-h-[320px] place-items-center overflow-hidden rounded-[28px] border border-dashed border-fg/15 p-8 text-center"
             >
-              <div className="hud-grid absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
               <div className="relative max-w-sm">
                 <div className="mx-auto grid size-16 place-items-center rounded-full border border-line">
                   <span className="size-3 animate-pulse rounded-full bg-signal shadow-[0_0_16px_#00ff85]" />

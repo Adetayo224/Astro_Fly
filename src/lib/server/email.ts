@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { render } from "@react-email/components"
 import type { ReactElement } from "react"
+import nodemailer, { type Transporter } from "nodemailer"
 import { Resend } from "resend"
 import BookingConfirmationEmail from "@/emails/booking-confirmation"
 import CustomMessageEmail from "@/emails/custom-message"
@@ -11,9 +12,10 @@ import StatusUpdateEmail from "@/emails/status-update"
 import TeamAlertEmail from "@/emails/team-alert"
 import { site } from "@/lib/site"
 import type { Booking } from "@/lib/types"
-import { env, hasResend } from "./env"
+import { env, hasMailer, hasSmtp } from "./env"
 
 let resend: Resend | null = null
+let smtp: Transporter | null = null
 
 async function send(
   to: string,
@@ -24,7 +26,7 @@ async function send(
 ): Promise<{ mocked: boolean; error?: unknown }> {
   const html = await render(element)
   const text = await render(element, { plainText: true })
-  if (!hasResend) {
+  if (!hasMailer) {
     // Mock mode: keep a copy on disk so the design can be checked without keys.
     if (process.env.NODE_ENV !== "production") {
       const dir = path.join(process.cwd(), ".mock_emails")
@@ -34,6 +36,23 @@ async function send(
     console.info(`[email:mock] to=${to} subject="${subject}"`)
     return { mocked: true }
   }
+  const reply = replyTo || env.teamEmail || undefined
+  if (hasSmtp) {
+    smtp ??= nodemailer.createTransport({
+      host: env.smtpHost,
+      port: env.smtpPort,
+      secure: env.smtpPort === 465,
+      auth: { user: env.smtpUser, pass: env.smtpPass },
+    })
+    try {
+      await smtp.sendMail({ from: env.emailFrom, to, subject, html, text, replyTo: reply })
+      return { mocked: false }
+    } catch (error) {
+      console.error("[email] smtp send failed", error)
+      if (!env.resendKey) return { mocked: false, error }
+      // fall through to the Resend API
+    }
+  }
   resend ??= new Resend(env.resendKey)
   const { error } = await resend.emails.send({
     from: env.emailFrom,
@@ -41,7 +60,7 @@ async function send(
     subject,
     html,
     text,
-    replyTo: replyTo || env.teamEmail || undefined,
+    replyTo: reply,
   })
   if (error) console.error("[email] send failed", error)
   return { mocked: false, error }

@@ -4,7 +4,7 @@ import { ExternalLink, FileText, Loader2, LogOut, RefreshCw, Search } from "luci
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Logo } from "@/components/brand/logo"
-import { CheckRow, Field, TextArea, TextInput } from "@/components/booking/fields"
+import { CheckRow, Field, PasswordInput, TextArea, TextInput } from "@/components/booking/fields"
 import { CountUp } from "@/components/home/count-up"
 import { ThemeToggle } from "@/components/shell/theme-toggle"
 import { Button } from "@/components/ui/button"
@@ -102,7 +102,6 @@ function Login({ onToken }: { onToken: (t: string, email: string) => void }) {
 
   return (
     <div className="relative grid min-h-svh place-items-center px-5">
-      <div className="hud-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
       <div className="noise absolute inset-0" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -135,9 +134,8 @@ function Login({ onToken }: { onToken: (t: string, email: string) => void }) {
             </Field>
             {mode === "signin" && (
               <Field label="Password" htmlFor="a-pass">
-                <TextInput
+                <PasswordInput
                   id="a-pass"
-                  type="password"
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

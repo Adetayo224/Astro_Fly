@@ -1,9 +1,10 @@
 "use client"
 import { motion } from "framer-motion"
 import Image from "next/image"
-import { GALLERY } from "@/lib/gallery"
+import { FEATURED_VIDEOS, GALLERY } from "@/lib/gallery"
 import { cn } from "@/lib/utils"
 import { SectionHeading } from "./reveal"
+import { YouTubeLite } from "./youtube-lite"
 
 /** Flight path diagrams for the shots we fly. Shown until real photos are added in src/lib/gallery.ts. */
 const SHOTS: { name: string; body: string; path: string; span?: string; viewBox?: string }[] = [
@@ -53,7 +54,6 @@ function ShotTile({ shot, i }: { shot: (typeof SHOTS)[number]; i: number }) {
         shot.span,
       )}
     >
-      <div className="hud-grid absolute inset-0 opacity-80" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(0,255,133,.10),transparent_65%)]" />
       <svg viewBox="0 0 400 300" className="relative aspect-[4/3] w-full md:aspect-auto md:h-64" preserveAspectRatio="xMidYMid meet" aria-hidden>
         <motion.path
@@ -106,9 +106,16 @@ export function Gallery() {
         body={
           hasPhotos
             ? undefined
-            : "Our gallery of real Astro_Fly shoots is on the way. Meanwhile, here are the moves we plan for every event."
+            : "Our own Astro_Fly showreel is on the way. Until then, watch how these creators fly the same moves we plan for every event."
         }
       />
+      {!hasPhotos && FEATURED_VIDEOS.length > 0 && (
+        <div className="mt-12 grid gap-4 md:grid-cols-2">
+          {FEATURED_VIDEOS.map((v) => (
+            <YouTubeLite key={v.id} video={v} />
+          ))}
+        </div>
+      )}
       {hasPhotos ? (
         <div className="mt-12 columns-1 gap-4 sm:columns-2 lg:columns-3">
           {GALLERY.map((g) => (
