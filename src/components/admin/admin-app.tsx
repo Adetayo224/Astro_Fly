@@ -86,11 +86,16 @@ function Login({ onToken }: { onToken: (t: string, email: string) => void }) {
     setLoading(true)
     setError(undefined)
     if (mode === "reset") {
-      const { error } = await sb.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/admin/accept`,
-      })
+      const res = await fetch("/api/admin/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      }).catch(() => null)
       setLoading(false)
-      if (error) return setError(error.message)
+      if (!res?.ok) {
+        const j = (await res?.json().catch(() => null)) as { error?: string } | null
+        return setError(j?.error || "Could not send the email. Check your connection and try again.")
+      }
       setMode("sent")
       return
     }
