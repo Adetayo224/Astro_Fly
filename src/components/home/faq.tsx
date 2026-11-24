@@ -15,6 +15,10 @@ const FAQS = [
     a: "By bank transfer to Samfred Robotics LTD, Fidelity Bank, account 6060500990. Use your booking reference as the narration. We confirm every payment by email.",
   },
   {
+    q: "Do I need my own drone pilot?",
+    a: "No. If you have a pilot, they can fly our drone for you. If not, choose Match me with a pilot when you book. It adds ₦10,000 and we send you your pilot's name and number before the event.",
+  },
+  {
     q: "Do I need to pay before you confirm?",
     a: "No. You can pay once we send the price. If your date is popular, a deposit holds it for you and comes off the final amount.",
   },

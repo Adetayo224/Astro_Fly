@@ -1,7 +1,8 @@
 # Astro_Fly
 
 Drone shoot booking app for **Astro_Fly**, a service of Samfred Robotics Ltd (Ogbomoso, Nigeria).
-Customers pick a drone, fill a four step booking form, pay by bank transfer, and get email confirmations.
+Customers pick a drone, fill a four step booking form, choose whether they bring their own drone pilot or want us
+to match one (+₦10,000), pay by bank transfer, and get email confirmations.
 The team manages bookings, payments, emails and team access from a protected dashboard at `/admin`.
 It installs on Android and iPhone home screens as an app (PWA).
 
@@ -38,7 +39,8 @@ All keys live in `.env.local`, which is never committed. `.env.example` lists ev
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Your live URL | Links in emails |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | `orders@samfredrobotics.com` | Shown on the site |
-| `NEXT_PUBLIC_DEPOSIT_NGN` | Your choice (default `20000`) | Deposit amount |
+| `NEXT_PUBLIC_DEPOSIT_NGN` | Your choice (default `20000`) | Amount to hold the date |
+| `NEXT_PUBLIC_PILOT_FEE_NGN` | Your choice (default `10000`) | Added when we provide the pilot |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase > Project settings > API | Database, storage, admin login |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase > Project settings > API | Admin login in the browser |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase > Project settings > API (secret) | Server routes only |
@@ -58,7 +60,7 @@ Astro_Fly object is prefixed and nothing else in the project is touched:
 
 * Tables: `astrofly_drones`, `astrofly_bookings`, `astrofly_booking_events`, `astrofly_notify_me`, `astrofly_team`
 * Functions: `astrofly_is_team()`, `astrofly_touch_updated_at()`
-* Storage bucket: `astrofly-flyers` (private)
+* Storage bucket: `astrofly-flyers` (private, no longer used)
 
 The migrations in `supabase/migrations/` have already been applied to that project. To set up a fresh project,
 run them in order in the SQL editor (or `npx supabase db push`).
@@ -84,7 +86,18 @@ private and shown to the team through short lived signed links.
 
 ---
 
-## 5. Payments (bank transfer)
+## 5. Pilots
+
+In step 3 of the booking, customers answer **Do you have your own drone pilot?**
+
+* **Yes:** their pilot flies the drone. They pay ₦20,000 to hold the date.
+* **No, match me:** we provide a pilot for ₦10,000 more, so ₦30,000 to hold the date.
+
+Bookings that need a pilot show a **Needs pilot** tag in the dashboard. Open the booking, fill in **Match a pilot**
+(name and phone) and save. The customer gets a "Meet your pilot" email with a WhatsApp button, and the pilot shows
+on their My Bookings page.
+
+## 6. Payments (bank transfer)
 
 Customers pay by transfer to **Fidelity Bank, 6060500990, Samfred Robotics LTD**, using their booking reference
 (for example `AF2026K7Q2`) as the narration. The details are shown after booking, in My Bookings and in the
@@ -99,11 +112,12 @@ without `PAYSTACK_SECRET_KEY`.)
 
 ---
 
-## 6. Emails
+## 7. Emails
 
 Sent through Resend from `orders@samfredrobotics.com`:
 
-* Customer confirmation for every booking (with bank details when they chose to pay a deposit)
+* Customer confirmation for every booking (with bank details when they chose to pay now)
+* "Meet your pilot" when the team matches a pilot
 * Team alert to `orders@samfredrobotics.com` for every booking
 * Status updates when the team changes the status (the "confirmed" email includes the price and bank details)
 * Payment receipts when the team records a transfer
@@ -116,7 +130,7 @@ domain is verified in Resend, and delivery to `orders@samfredrobotics.com` has b
 
 ---
 
-## 7. Install as a phone app
+## 8. Install as a phone app
 
 Astro_Fly is a Progressive Web App:
 
@@ -128,7 +142,7 @@ Installing needs the site on HTTPS (any Vercel deployment works) or `localhost`.
 
 ---
 
-## 8. The 3D drone
+## 9. The 3D drone
 
 The hero renders a detailed procedural foldable camera drone with reflections, a green rim light, bloom, scroll
 poses and cursor or phone tilt. It picks a quality tier per device, uses a lighter tier when there is no GPU,
@@ -140,7 +154,7 @@ https://sketchfab.com/3d-models/a67e84ebcec145818e122cdf40705fb0 as `.glb`, save
 
 ---
 
-## 9. Deploy to Vercel
+## 10. Deploy to Vercel
 
 1. Sign in at https://vercel.com with the GitHub account `Adetayo224`.
 2. **Add New > Project**, pick **Astro_Fly**, and keep the detected settings (Framework: Next.js, root `./`).
@@ -151,6 +165,7 @@ https://sketchfab.com/3d-models/a67e84ebcec145818e122cdf40705fb0 as `.glb`, save
    | `NEXT_PUBLIC_SITE_URL` | `https://YOUR_PROJECT.vercel.app` (or your own domain later) |
    | `NEXT_PUBLIC_CONTACT_EMAIL` | `orders@samfredrobotics.com` |
    | `NEXT_PUBLIC_DEPOSIT_NGN` | `20000` |
+   | `NEXT_PUBLIC_PILOT_FEE_NGN` | `10000` |
    | `NEXT_PUBLIC_SUPABASE_URL` | from `.env.local` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | from `.env.local` |
    | `SUPABASE_SERVICE_ROLE_KEY` | from `.env.local` (secret) |

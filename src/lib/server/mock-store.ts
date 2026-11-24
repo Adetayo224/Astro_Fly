@@ -9,7 +9,6 @@ interface MockDB {
   bookings: Booking[]
   events: BookingEvent[]
   notify: { email: string; drone_slug: string; created_at: string }[]
-  flyers: Map<string, { name: string; type: string; data: Buffer }>
   team: { email: string; role: "owner" | "admin"; invited_by: string | null; created_at: string }[]
 }
 
@@ -24,11 +23,10 @@ function seed(): MockDB {
   const now = new Date().toISOString()
   const base = {
     custom_duration: null,
-    has_flyer: false,
-    flyer_path: null,
-    flyer_name: null,
-    design_flyer: false,
-    flyer_details: null,
+    needs_pilot: false,
+    pilot_fee: 0,
+    pilot_name: null,
+    pilot_phone: null,
     notes: null,
     amount_paid: 0,
     payment_reference: null,
@@ -59,8 +57,8 @@ function seed(): MockDB {
       drone_slug: "dji-mini-4k",
       drone_name: "DJI Mini 4K",
       deliverables: ["photos", "edited_video"],
-      design_flyer: true,
-      flyer_details: "Demo flyer request. Names, date and venue.",
+      needs_pilot: true,
+      pilot_fee: 10000,
       pay_option: "later",
       price: null,
     },
@@ -100,7 +98,7 @@ function seed(): MockDB {
     created_at: now,
   }))
   const team = [{ email: "demo@admin", role: "owner" as const, invited_by: "setup", created_at: now }]
-  return { bookings, events, notify: [], flyers: new Map(), team }
+  return { bookings, events, notify: [], team }
 }
 
 export function mockDB(): MockDB {

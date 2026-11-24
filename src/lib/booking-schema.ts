@@ -37,8 +37,6 @@ export const NIGERIAN_STATES = [
   "Zamfara",
 ] as const
 
-export const FLYER_MAX_BYTES = 10 * 1024 * 1024
-export const FLYER_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"]
 
 const phone = z
   .string()
@@ -80,9 +78,8 @@ export const eventSchema = z.object({
 export const needsSchema = z.object({
   drone_slug: z.string().min(1, "Choose a drone"),
   deliverables: z.array(z.string()).min(1, "Pick at least one thing you want from us"),
-  has_flyer: z.enum(["yes", "no"], { message: "Let us know about the flyer" }),
-  design_flyer: z.boolean(),
-  flyer_details: z.string().trim().max(1200).optional(),
+  /** "yes" = they bring their own pilot, "no" = match them with an Astro_Fly pilot (extra fee) */
+  has_pilot: z.enum(["yes", "no"], { message: "Tell us if you have your own pilot" }),
   notes: z.string().trim().max(2000).optional(),
 })
 
@@ -105,13 +102,6 @@ export const bookingSchema = detailsSchema
     if (v.duration === "Custom" && !v.custom_duration?.trim()) {
       ctx.addIssue({ code: "custom", path: ["custom_duration"], message: "Tell us how long you need" })
     }
-    if (v.has_flyer === "no" && v.design_flyer && !v.flyer_details?.trim()) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["flyer_details"],
-        message: "Tell us what to put on the flyer",
-      })
-    }
   })
 
 export type BookingInput = z.input<typeof bookingSchema>
@@ -132,7 +122,7 @@ export const STEP_FIELDS = [
     "setting",
     "guests",
   ],
-  ["drone_slug", "deliverables", "has_flyer", "design_flyer", "flyer_details", "notes"],
+  ["drone_slug", "deliverables", "has_pilot", "notes"],
   ["pay_option", "terms"],
 ] as const
 
@@ -165,10 +155,6 @@ export const stepSchemas = [
       ctx.addIssue({ code: "custom", path: ["custom_duration"], message: "Tell us how long you need" })
     }
   }),
-  needsSchema.superRefine((v, ctx) => {
-    if (v.has_flyer === "no" && v.design_flyer && !v.flyer_details?.trim()) {
-      ctx.addIssue({ code: "custom", path: ["flyer_details"], message: "Tell us what to put on the flyer" })
-    }
-  }),
+  needsSchema,
   reviewSchema,
 ] as const

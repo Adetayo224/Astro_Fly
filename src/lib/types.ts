@@ -46,11 +46,12 @@ export interface Booking {
   drone_slug: string
   drone_name: string
   deliverables: string[]
-  has_flyer: boolean
-  flyer_path: string | null
-  flyer_name: string | null
-  design_flyer: boolean
-  flyer_details: string | null
+  /** True when we match them with an Astro_Fly pilot */
+  needs_pilot: boolean
+  pilot_fee: number
+  /** Filled in by the team once a pilot is matched */
+  pilot_name: string | null
+  pilot_phone: string | null
   notes: string | null
   pay_option: "deposit" | "later"
   price: number | null

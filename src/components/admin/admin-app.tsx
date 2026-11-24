@@ -1,6 +1,6 @@
 "use client"
 import { AnimatePresence, motion } from "framer-motion"
-import { ExternalLink, FileText, Loader2, LogOut, RefreshCw, Search } from "lucide-react"
+import { Loader2, LogOut, RefreshCw, Search } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Logo } from "@/components/brand/logo"
@@ -349,7 +349,16 @@ function Dashboard({ token, email, onSignOut }: { token: string; email: string; 
                       </span>
                       <span className="col-span-2 truncate text-[13px] text-subtle md:col-span-1">
                         {b.drone_name}
-                        {b.has_flyer && <FileText className="ml-1.5 inline size-3.5 text-signal-ink" aria-label="Has flyer" />}
+                        {b.needs_pilot && (
+                          <span
+                            className={cn(
+                              "ml-2 rounded-full px-2 py-0.5 font-mono text-[10px] tracking-wider uppercase",
+                              b.pilot_name ? "bg-fg/10 text-fg/70" : "bg-amber-400/15 text-amber-600 dark:text-amber-300",
+                            )}
+                          >
+                            {b.pilot_name ? `Pilot: ${b.pilot_name.split(" ")[0]}` : "Needs pilot"}
+                          </span>
+                        )}
                       </span>
                       <span className="col-span-2 font-mono text-[13px] md:col-span-1">{b.price ? formatNaira(b.price) : "No price"}</span>
                     </button>
@@ -379,7 +388,10 @@ function BookingDetail({
   onClose: () => void
   onUpdated: (b: Booking) => void
 }) {
-  const [data, setData] = useState<{ booking: Booking; events: BookingEvent[]; flyerUrl: string | null } | null>(null)
+  const [data, setData] = useState<{ booking: Booking; events: BookingEvent[] } | null>(null)
+  const [pilotName, setPilotName] = useState("")
+  const [pilotPhone, setPilotPhone] = useState("")
+  const [matching, setMatching] = useState(false)
   const [status, setStatus] = useState<BookingStatus>("pending")
   const [price, setPrice] = useState("")
   const [note, setNote] = useState("")
@@ -396,6 +408,8 @@ function BookingDetail({
         setStatus(j.booking.status)
         setPrice(j.booking.price ? String(j.booking.price) : "")
         setNote(j.booking.admin_note ?? "")
+        setPilotName(j.booking.pilot_name ?? "")
+        setPilotPhone(j.booking.pilot_phone ?? "")
         setMessage("")
         setNotify(true)
       })
@@ -484,9 +498,29 @@ function BookingDetail({
     }
   }
 
+  const matchPilot = async () => {
+    if (!data) return
+    setMatching(true)
+    try {
+      const res = await fetch(`/api/admin/bookings/${data.booking.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ pilot_name: pilotName.trim(), pilot_phone: pilotPhone.trim() || null, notify: true }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      setData((d) => (d ? { ...d, booking: json.booking, events: json.events } : d))
+      onUpdated(json.booking)
+      toast.success(json.emailed ? "Pilot saved and introduced to the customer by email" : "Pilot saved")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save the pilot")
+    } finally {
+      setMatching(false)
+    }
+  }
+
   // Only show data that belongs to the booking currently open
   const b = data?.booking.id === id ? data?.booking : undefined
-  const isPdf = b?.flyer_name?.toLowerCase().endsWith(".pdf")
 
   return (
     <Sheet
@@ -543,8 +577,14 @@ function BookingDetail({
               ["Guests", b.guests],
               ["Drone", b.drone_name],
               ["Deliverables", deliverableLabels(b.deliverables).join(", ")],
-              ["Flyer", b.has_flyer ? b.flyer_name ?? "Uploaded" : b.design_flyer ? "Design one for them" : "None"],
-              ...(b.flyer_details ? [["Flyer details", b.flyer_details]] : []),
+              [
+                "Pilot",
+                b.needs_pilot
+                  ? b.pilot_name
+                    ? `${b.pilot_name}${b.pilot_phone ? `, ${b.pilot_phone}` : ""}`
+                    : `Needs an Astro_Fly pilot (+${formatNaira(b.pilot_fee)})`
+                  : "Has their own pilot",
+              ],
               ...(b.notes ? [["Notes", b.notes]] : []),
               ["Payment choice", b.pay_option === "deposit" ? "Deposit now" : "Pay later"],
               ["Paid so far", formatNaira(b.amount_paid)],
@@ -557,27 +597,35 @@ function BookingDetail({
             ))}
           </dl>
 
-          {data?.flyerUrl && (
-            <section>
-              <p className="eyebrow mb-3">Flyer</p>
-              <a
-                href={data.flyerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block overflow-hidden rounded-3xl border border-line bg-surface"
-              >
-                {isPdf ? (
-                  <span className="flex items-center gap-3 p-5">
-                    <FileText className="size-6 text-signal-ink" /> {b.flyer_name}
-                  </span>
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={data.flyerUrl} alt="Event flyer" className="max-h-96 w-full object-contain" />
-                )}
-                <span className="flex items-center gap-2 border-t border-line px-5 py-3 text-[13px] text-subtle group-hover:text-fg">
-                  <ExternalLink className="size-4" /> Open full size
-                </span>
-              </a>
+          {b.needs_pilot && (
+            <section className="flex flex-col gap-4 rounded-3xl border border-line bg-surface/60 p-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="eyebrow">Match a pilot</p>
+                <span className="font-mono text-[12px] text-subtle">Fee {formatNaira(b.pilot_fee)}</span>
+              </div>
+              <p className="text-[13px] leading-relaxed text-subtle">
+                Choose who will fly for this customer. When you save, they get an email introducing the pilot, and the
+                pilot shows on their booking page.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Pilot name" htmlFor="p-name">
+                  <TextInput id="p-name" value={pilotName} onChange={(e) => setPilotName(e.target.value)} />
+                </Field>
+                <Field label="Pilot phone" htmlFor="p-phone">
+                  <TextInput
+                    id="p-phone"
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="0803 000 0000"
+                    value={pilotPhone}
+                    onChange={(e) => setPilotPhone(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <Button size="lg" onClick={matchPilot} disabled={matching || !pilotName.trim()}>
+                {matching && <Loader2 className="animate-spin" />}
+                {b.pilot_name ? "Update pilot and tell the customer" : "Save and introduce the pilot"}
+              </Button>
             </section>
           )}
 

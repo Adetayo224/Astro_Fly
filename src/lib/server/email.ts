@@ -8,6 +8,7 @@ import { Resend } from "resend"
 import BookingConfirmationEmail from "@/emails/booking-confirmation"
 import CustomMessageEmail from "@/emails/custom-message"
 import PaymentReceiptEmail from "@/emails/payment-receipt"
+import PilotAssignedEmail from "@/emails/pilot-assigned"
 import StatusUpdateEmail from "@/emails/status-update"
 import TeamAlertEmail from "@/emails/team-alert"
 import { site } from "@/lib/site"
@@ -137,6 +138,17 @@ export function sendCustomEmail(booking: Booking, subject: string, message: stri
       `${subject} (${booking.reference})`,
       CustomMessageEmail({ booking, subject, message, siteUrl: site.url }),
       "custom",
+    ),
+  )
+}
+
+export function sendPilotEmail(booking: Booking) {
+  return safe(() =>
+    send(
+      booking.email,
+      `Meet your pilot: ${booking.pilot_name} (${booking.reference})`,
+      PilotAssignedEmail({ booking, siteUrl: site.url }),
+      "pilot",
     ),
   )
 }

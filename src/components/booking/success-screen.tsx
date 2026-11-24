@@ -4,7 +4,7 @@ import { Check, Copy, MessageCircle } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { ButtonLink } from "@/components/ui/button"
-import { site, whatsappLink } from "@/lib/site"
+import { whatsappLink } from "@/lib/site"
 import { BankDetailsCard } from "./bank-details"
 
 export interface SuccessData {
@@ -12,6 +12,8 @@ export interface SuccessData {
   email: string
   payOption: "deposit" | "later"
   name: string
+  amountDue: number
+  needsPilot: boolean
 }
 
 export function SuccessCheck({ size = 112 }: { size?: number }) {
@@ -96,6 +98,7 @@ export function SuccessScreen({ data, onClose }: { data: SuccessData; onClose?: 
         <motion.p variants={item} className="mt-3 text-[14.5px] leading-relaxed text-subtle">
           We sent a confirmation email to <span className="text-fg">{data.email}</span>. Our team will reply with your
           price within 24 hours.
+          {data.needsPilot && " We will also match you with a pilot and send you their name and number."}
         </motion.p>
 
         <motion.button
@@ -118,8 +121,8 @@ export function SuccessScreen({ data, onClose }: { data: SuccessData; onClose?: 
           {data.payOption === "deposit" && (
             <BankDetailsCard
               reference={data.reference}
-              amount={site.depositNaira}
-              title="Pay your deposit to hold the date"
+              amount={data.amountDue}
+              title={data.needsPilot ? "Pay to hold your date and pilot" : "Pay to hold your date"}
             />
           )}
           <a

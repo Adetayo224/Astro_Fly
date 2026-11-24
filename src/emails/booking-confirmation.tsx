@@ -32,14 +32,18 @@ export default function BookingConfirmationEmail({
           ["Venue", `${booking.venue_name}, ${booking.city}`],
           ["Drone", booking.drone_name],
           ["You want", deliverableLabels(booking.deliverables).join(", ")],
+          ["Pilot", booking.needs_pilot ? "We will match you with an Astro_Fly pilot" : "Your own pilot"],
           ["Price", booking.price ? `NGN ${booking.price.toLocaleString("en-NG")}` : "To be confirmed"],
         ]}
       />
       {booking.pay_option === "deposit" ? (
         <>
           <Divider />
-          <P>You chose to pay a deposit now to hold your date. Transfer it to the account below. Your date is held once we confirm it by email.</P>
-          <BankDetails reference={booking.reference} amount={`NGN ${depositNaira.toLocaleString("en-NG")}`} />
+          <P>You chose to pay now to hold your date. Transfer it to the account below. Your date is held once we confirm it by email.</P>
+          <BankDetails
+            reference={booking.reference}
+            amount={`NGN ${(depositNaira + booking.pilot_fee).toLocaleString("en-NG")}${booking.pilot_fee ? ` (includes NGN ${booking.pilot_fee.toLocaleString("en-NG")} for your pilot)` : ""}`}
+          />
         </>
       ) : null}
       <Divider />

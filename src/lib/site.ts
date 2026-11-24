@@ -19,10 +19,18 @@ export const site = {
     accountName: "Samfred Robotics LTD",
   },
   address: ["New Sawmill Area, Pakiotan Estate", "Ogbomoso, Oyo State, Nigeria"],
+  /** Paid to hold the date */
   depositNaira: Number(process.env.NEXT_PUBLIC_DEPOSIT_NGN || 20000),
+  /** Added when the customer asks us to match them with a pilot */
+  pilotFeeNaira: Number(process.env.NEXT_PUBLIC_PILOT_FEE_NGN || 10000),
   /** Attribution for a CC BY 3D model in public/models, shown in the footer when set. */
   modelCredit: process.env.NEXT_PUBLIC_MODEL_CREDIT || "",
 } as const
+
+/** What the customer pays to hold the date: the deposit plus the pilot fee if we provide the pilot. */
+export function upfrontNaira(needsPilot: boolean) {
+  return site.depositNaira + (needsPilot ? site.pilotFeeNaira : 0)
+}
 
 export function whatsappLink(message?: string) {
   const base = `https://wa.me/${site.whatsapp}`

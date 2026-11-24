@@ -1,7 +1,7 @@
 "use client"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AnimatePresence, motion } from "framer-motion"
-import { ArrowLeft, ArrowRight, FileText, ImageUp, Loader2, Lock, Pencil, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Loader2, Lock, Pencil, UserRound, UsersRound } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Controller, useForm, type Resolver } from "react-hook-form"
@@ -12,8 +12,6 @@ import {
   DELIVERABLES,
   DURATIONS,
   EVENT_TYPES,
-  FLYER_MAX_BYTES,
-  FLYER_TYPES,
   GUEST_RANGES,
   NIGERIAN_STATES,
   SETTINGS,
@@ -22,7 +20,7 @@ import {
   type BookingInput,
 } from "@/lib/booking-schema"
 import { deliverableLabels, formatEventDate, formatTime } from "@/lib/format"
-import { formatNaira, site } from "@/lib/site"
+import { formatNaira, site, upfrontNaira } from "@/lib/site"
 import type { Drone } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { Calendar, TimePicker } from "./date-time"
@@ -50,24 +48,20 @@ const DEFAULTS: BookingInput = {
   guests: "",
   drone_slug: "",
   deliverables: [],
-  has_flyer: undefined as unknown as "yes",
-  design_flyer: false,
-  flyer_details: "",
+  has_pilot: undefined as unknown as "yes",
   notes: "",
   pay_option: "later",
   terms: false,
 }
 
 /** Draft kept in memory so closing the sheet by accident does not lose progress. */
-const draft: { values: Partial<BookingInput> | null; step: number; flyer: File | null } = {
+const draft: { values: Partial<BookingInput> | null; step: number } = {
   values: null,
   step: 0,
-  flyer: null,
 }
 export function clearBookingDraft() {
   draft.values = null
   draft.step = 0
-  draft.flyer = null
 }
 
 export function BookingFlow({
@@ -84,8 +78,6 @@ export function BookingFlow({
   const available = useMemo(() => drones.filter((d) => d.status === "available"), [drones])
   const [step, setStep] = useState(draft.step)
   const [dir, setDir] = useState(1)
-  const [flyer, setFlyer] = useState<File | null>(draft.flyer)
-  const [flyerError, setFlyerError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<SuccessData | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -110,47 +102,38 @@ export function BookingFlow({
 
   // Keep the draft in sync while the flow is open.
   useEffect(() => {
-    const sub = form.watch((values) => {
+    const sub = form.watch((values, { name }) => {
       draft.values = values as Partial<BookingInput>
+      // Clear an error as soon as the person fixes that field (chips, calendar, pickers)
+      if (name && form.getFieldState(name as keyof BookingInput).error) void form.trigger(name as keyof BookingInput)
     })
     return () => sub.unsubscribe()
   }, [form])
   useEffect(() => {
     draft.step = step
   }, [step])
-  useEffect(() => {
-    draft.flyer = flyer
-  }, [flyer])
 
   const whatsappSame = watch("whatsapp_same")
   const duration = watch("duration")
-  const hasFlyer = watch("has_flyer")
-  const designFlyer = watch("design_flyer")
+  const hasPilot = watch("has_pilot")
+  const dueNow = upfrontNaira(hasPilot === "no")
 
   const scrollTop = () => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
 
   const go = async (next: number) => {
     if (next > step) {
       const ok = await trigger(STEP_FIELDS[step] as unknown as (keyof BookingInput)[], { shouldFocus: true })
-      let flyerOk = true
+      let extraOk = true
       // Cross field checks shown alongside the other errors on this step
       if (step === 0 && !getValues("whatsapp_same") && !/^\+?\d{10,15}$/.test((getValues("whatsapp") || "").replace(/[\s()]/g, ""))) {
         form.setError("whatsapp", { message: "Enter a valid WhatsApp number" })
-        flyerOk = false
+        extraOk = false
       }
       if (step === 1 && getValues("duration") === "Custom" && !getValues("custom_duration")?.trim()) {
         form.setError("custom_duration", { message: "Tell us how long you need" })
-        flyerOk = false
+        extraOk = false
       }
-      if (step === 2 && getValues("has_flyer") === "no" && getValues("design_flyer") && !getValues("flyer_details")?.trim()) {
-        form.setError("flyer_details", { message: "Tell us what to put on the flyer" })
-        flyerOk = false
-      }
-      if (step === 2 && getValues("has_flyer") === "yes" && !flyer) {
-        setFlyerError("Attach your flyer, or choose No")
-        flyerOk = false
-      }
-      if (!ok || !flyerOk) {
+      if (!ok || !extraOk) {
         requestAnimationFrame(() => {
           scrollRef.current?.querySelector('[aria-invalid="true"], [role="alert"]')?.scrollIntoView({
             behavior: "smooth",
@@ -189,7 +172,6 @@ export function BookingFlow({
     try {
       const fd = new FormData()
       fd.set("payload", JSON.stringify(getValues()))
-      if (parsed.data.has_flyer === "yes" && flyer) fd.set("flyer", flyer)
       const res = await fetch("/api/bookings", { method: "POST", body: fd })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || "Something went wrong")
@@ -197,6 +179,8 @@ export function BookingFlow({
         reference: json.reference,
         email: json.email,
         payOption: json.pay_option,
+        amountDue: json.amount_due,
+        needsPilot: json.needs_pilot,
         name: parsed.data.full_name.split(" ")[0],
       })
       clearBookingDraft()
@@ -206,14 +190,6 @@ export function BookingFlow({
     } finally {
       setSubmitting(false)
     }
-  }
-
-  const pickFlyer = (f: File | undefined) => {
-    setFlyerError(undefined)
-    if (!f) return
-    if (!FLYER_TYPES.includes(f.type)) return setFlyerError("Use a JPG, PNG, WEBP, HEIC image or a PDF")
-    if (f.size > FLYER_MAX_BYTES) return setFlyerError("That file is over 10 MB. Try a smaller one")
-    setFlyer(f)
   }
 
   if (success) return <SuccessScreen data={success} onClose={onClose} />
@@ -552,77 +528,70 @@ export function BookingFlow({
                   />
                   <Controller
                     control={control}
-                    name="has_flyer"
+                    name="has_pilot"
                     render={({ field }) => (
                       <Field
-                        label="Do you have an event flyer?"
-                        error={errors.has_flyer?.message}
-                        hint="It helps the pilot plan around your programme."
+                        label="Do you have your own drone pilot?"
+                        error={errors.has_pilot?.message}
+                        hint="If not, we match you with one of our pilots and introduce them to you before the event."
                       >
-                        <Segmented
-                          value={field.value}
-                          onChange={(v) => {
-                            field.onChange(v)
-                            setFlyerError(undefined)
-                          }}
-                          options={[
-                            { id: "yes", label: "Yes, I have one" },
-                            { id: "no", label: "No" },
-                          ]}
-                          invalid={!!errors.has_flyer}
-                        />
+                        <div role="radiogroup" className="grid gap-2.5">
+                          {[
+                            {
+                              id: "yes" as const,
+                              icon: UserRound,
+                              title: "Yes, I have my own pilot",
+                              body: "Your pilot flies our drone on the day.",
+                              fee: null,
+                            },
+                            {
+                              id: "no" as const,
+                              icon: UsersRound,
+                              title: "No, match me with an Astro_Fly pilot",
+                              body: "We pick a trained pilot for your event and send you their name and number.",
+                              fee: `+${formatNaira(site.pilotFeeNaira)}`,
+                            },
+                          ].map((o) => {
+                            const on = field.value === o.id
+                            const Icon = o.icon
+                            return (
+                              <button
+                                key={o.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={on}
+                                onClick={() => field.onChange(o.id)}
+                                className={cn(
+                                  "flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors active:scale-[0.99]",
+                                  on
+                                    ? "border-signal bg-signal/8"
+                                    : errors.has_pilot
+                                      ? "border-destructive/60"
+                                      : "border-line bg-surface/50 hover:border-fg/25",
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    "grid size-10 shrink-0 place-items-center rounded-xl transition-colors",
+                                    on ? "bg-signal text-ink" : "bg-surface-2 text-fg/70",
+                                  )}
+                                >
+                                  <Icon className="size-5" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="flex items-start justify-between gap-3">
+                                    <span className="text-[14.5px] font-semibold">{o.title}</span>
+                                    {o.fee && <span className="shrink-0 font-mono text-[12.5px] text-signal-ink">{o.fee}</span>}
+                                  </span>
+                                  <span className="mt-1 block text-[13px] leading-relaxed text-subtle">{o.body}</span>
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
                       </Field>
                     )}
                   />
-                  <AnimatePresence mode="wait" initial={false}>
-                    {hasFlyer === "yes" && (
-                      <motion.div key="yes" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                        <FlyerDrop file={flyer} onPick={pickFlyer} onClear={() => setFlyer(null)} error={flyerError} />
-                      </motion.div>
-                    )}
-                    {hasFlyer === "no" && (
-                      <motion.div
-                        key="no"
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="flex flex-col gap-4"
-                      >
-                        <Controller
-                          control={control}
-                          name="design_flyer"
-                          render={({ field }) => (
-                            <CheckRow
-                              checked={!!field.value}
-                              onChange={field.onChange}
-                              description="Our designer will make one and send it to you for approval."
-                            >
-                              Please design a flyer for me
-                            </CheckRow>
-                          )}
-                        />
-                        <AnimatePresence initial={false}>
-                          {designFlyer && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="overflow-hidden"
-                            >
-                              <Field label="What should the flyer say?" htmlFor="flyer_details" error={errors.flyer_details?.message}>
-                                <TextArea
-                                  id="flyer_details"
-                                  placeholder="Names, date, venue, colours, dress code, hashtag, anything you want on it"
-                                  invalid={!!errors.flyer_details}
-                                  {...register("flyer_details")}
-                                />
-                              </Field>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                   <Field label="Anything else we should know?" htmlFor="notes" optional>
                     <TextArea
                       id="notes"
@@ -654,8 +623,8 @@ export function BookingFlow({
                     <Row k="Drone" v={drone?.name ?? ""} />
                     <Row k="Deliverables" v={deliverableLabels(v.deliverables || []).join(", ")} />
                     <Row
-                      k="Flyer"
-                      v={v.has_flyer === "yes" ? flyer?.name ?? "Attached" : v.design_flyer ? "Please design one" : "No flyer"}
+                      k="Pilot"
+                      v={v.has_pilot === "no" ? `Astro_Fly pilot (+${formatNaira(site.pilotFeeNaira)})` : "My own pilot"}
                     />
                     {v.notes ? <Row k="Notes" v={v.notes} /> : null}
                   </Summary>
@@ -683,8 +652,11 @@ export function BookingFlow({
                           {[
                             {
                               id: "deposit" as const,
-                              title: `Pay ${formatNaira(site.depositNaira)} deposit now`,
-                              body: "By bank transfer to Samfred Robotics. Your date is held once we confirm it by email, and the deposit comes off your final price.",
+                              title: `Pay ${formatNaira(dueNow)} now`,
+                              body:
+                                hasPilot === "no"
+                                  ? `${formatNaira(site.depositNaira)} to hold your date plus ${formatNaira(site.pilotFeeNaira)} for your pilot, by bank transfer to Samfred Robotics. We confirm it by email.`
+                                  : "By bank transfer to Samfred Robotics. Your date is held once we confirm it by email, and it comes off your final price.",
                             },
                             {
                               id: "later" as const,
@@ -806,88 +778,6 @@ function Row({ k, v }: { k: string; v: string }) {
     <div className="flex justify-between gap-6 py-2.5 text-[14px]">
       <dt className="shrink-0 text-subtle">{k}</dt>
       <dd className="text-right font-medium break-words">{v}</dd>
-    </div>
-  )
-}
-
-function FlyerDrop({
-  file,
-  onPick,
-  onClear,
-  error,
-}: {
-  file: File | null
-  onPick: (f: File | undefined) => void
-  onClear: () => void
-  error?: string
-}) {
-  const [over, setOver] = useState(false)
-  const preview = useMemo(() => (file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null), [file])
-  useEffect(() => () => {
-    if (preview) URL.revokeObjectURL(preview)
-  }, [preview])
-
-  return (
-    <div className="flex flex-col gap-2">
-      {file ? (
-        <div className="flex items-center gap-4 rounded-2xl border border-signal/50 bg-signal/6 p-3">
-          <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-surface">
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="Flyer preview" className="size-full object-cover" />
-            ) : (
-              <FileText className="size-7 text-signal-ink" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[14px] font-medium">{file.name}</p>
-            <p className="font-mono text-[11px] text-subtle">{(file.size / 1024 / 1024).toFixed(2)} MB · ready to send</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClear}
-            aria-label="Remove flyer"
-            className="grid size-10 place-items-center rounded-full bg-surface transition active:scale-90"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-      ) : (
-        <label
-          onDragOver={(e) => {
-            e.preventDefault()
-            setOver(true)
-          }}
-          onDragLeave={() => setOver(false)}
-          onDrop={(e) => {
-            e.preventDefault()
-            setOver(false)
-            onPick(e.dataTransfer.files?.[0])
-          }}
-          className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border border-dashed px-6 py-9 text-center transition-colors",
-            over ? "border-signal bg-signal/8" : error ? "border-destructive/60" : "border-fg/20 bg-surface/40 hover:border-signal/50",
-          )}
-        >
-          <span className="grid size-12 place-items-center rounded-2xl bg-signal/12 text-signal-ink">
-            <ImageUp className="size-6" />
-          </span>
-          <span className="text-[14.5px] font-medium">Upload your flyer</span>
-          <span className="text-[12.5px] text-subtle">Image or PDF, up to 10 MB</span>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
-            className="sr-only"
-            onChange={(e) => onPick(e.target.files?.[0])}
-            data-testid="flyer-input"
-          />
-        </label>
-      )}
-      {error && (
-        <p role="alert" className="text-[12.5px] text-destructive">
-          {error}
-        </p>
-      )}
     </div>
   )
 }

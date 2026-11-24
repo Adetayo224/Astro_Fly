@@ -24,4 +24,4 @@ export const T = {
   team: "astrofly_team",
 } as const
 
-export const FLYER_BUCKET = "astrofly-flyers"
+export const FLYER_BUCKET = "astrofly-flyers" // unused since the poster upload was removed

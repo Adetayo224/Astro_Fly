@@ -7,7 +7,7 @@ import { Field, TextInput } from "@/components/booking/fields"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { deliverableLabels, formatEventDate, formatTime } from "@/lib/format"
-import { formatNaira, site, whatsappLink } from "@/lib/site"
+import { formatNaira, upfrontNaira, whatsappLink } from "@/lib/site"
 import { STATUS_LABEL, type Booking, type BookingEvent } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { StatusTimeline } from "./status-timeline"
@@ -187,8 +187,8 @@ export function BookingLookup() {
                   </dl>
                   {canPay && !b.price && b.amount_paid === 0 && (
                     <p className="mt-4 text-[13px] leading-relaxed text-subtle">
-                      Your price is on the way. You can hold the date now with a {formatNaira(site.depositNaira)}{" "}
-                      deposit using the bank details below.
+                      Your price is on the way. You can hold the date now with {formatNaira(upfrontNaira(b.needs_pilot))}{" "}
+                      using the bank details below.
                     </p>
                   )}
                 </div>
@@ -211,10 +211,35 @@ export function BookingLookup() {
                 </div>
               </div>
 
+              {b.needs_pilot && b.status !== "cancelled" && (
+                <div className="flex items-center gap-4 rounded-[28px] border border-line bg-surface p-6">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-full bg-signal/12 font-heading text-[18px] font-semibold text-signal-ink">
+                    {b.pilot_name ? b.pilot_name[0].toUpperCase() : "?"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="eyebrow">Your pilot</p>
+                    {b.pilot_name ? (
+                      <>
+                        <p className="mt-1 text-[17px] font-semibold">{b.pilot_name}</p>
+                        {b.pilot_phone && (
+                          <a href={`tel:${b.pilot_phone.replace(/\s/g, "")}`} className="font-mono text-[13px] text-signal-ink">
+                            {b.pilot_phone}
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <p className="mt-1 text-[14px] text-subtle">
+                        We are matching you with a pilot. You will get their name and number by email.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {canPay && ((balance !== null && balance > 0) || (!b.price && b.amount_paid === 0)) && (
                 <BankDetailsCard
                   reference={b.reference}
-                  amount={balance !== null && balance > 0 ? balance : site.depositNaira}
+                  amount={balance !== null && balance > 0 ? balance : upfrontNaira(b.needs_pilot)}
                   title={balance !== null && balance > 0 ? "Pay your balance" : "Hold your date with a deposit"}
                 />
               )}

@@ -2,15 +2,15 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { BOOKING_STATUSES } from "@/lib/types"
 import { requireAdmin } from "@/lib/server/admin-auth"
-import { flyerUrl, getBookingById, listEvents, updateBooking } from "@/lib/server/bookings"
-import { sendStatusEmail } from "@/lib/server/email"
+import { addNote, getBookingById, listEvents, updateBooking } from "@/lib/server/bookings"
+import { sendPilotEmail, sendStatusEmail } from "@/lib/server/email"
 
 export async function GET(req: Request, ctx: RouteContext<"/api/admin/bookings/[id]">) {
   if (!(await requireAdmin(req))) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
   const { id } = await ctx.params
   const booking = await getBookingById(id)
   if (!booking) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  return NextResponse.json({ booking, events: await listEvents(id), flyerUrl: await flyerUrl(booking) })
+  return NextResponse.json({ booking, events: await listEvents(id) })
 }
 
 const patchSchema = z.object({
@@ -19,6 +19,8 @@ const patchSchema = z.object({
   admin_note: z.string().max(2000).nullable().optional(),
   notify: z.boolean().default(true),
   message: z.string().max(1000).nullable().optional(),
+  pilot_name: z.string().trim().max(120).nullable().optional(),
+  pilot_phone: z.string().trim().max(40).nullable().optional(),
 })
 
 export async function PATCH(req: Request, ctx: RouteContext<"/api/admin/bookings/[id]">) {
@@ -33,6 +35,17 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/admin/bookings
   if (notify && (result.statusChanged || message)) {
     await sendStatusEmail(result.booking, message)
     emailed = true
+  }
+  // A newly matched (or changed) pilot is introduced to the customer by email
+  const pilotChanged =
+    Boolean(result.booking.pilot_name) &&
+    (result.booking.pilot_name !== result.previous.pilot_name || result.booking.pilot_phone !== result.previous.pilot_phone)
+  if (pilotChanged) {
+    await addNote(id, result.booking.status, `Pilot matched: ${result.booking.pilot_name}`)
+    if (notify) {
+      await sendPilotEmail(result.booking)
+      emailed = true
+    }
   }
   return NextResponse.json({ booking: result.booking, events: await listEvents(id), emailed })
 }

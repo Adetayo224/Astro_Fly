@@ -4,7 +4,8 @@ import type { BookingData } from "@/lib/booking-schema"
 import { DRONES } from "@/lib/drones"
 import type { Booking, BookingEvent, BookingStatus } from "@/lib/types"
 import { mockDB } from "./mock-store"
-import { FLYER_BUCKET, supabaseAdmin, T } from "./supabase"
+import { site } from "@/lib/site"
+import { supabaseAdmin, T } from "./supabase"
 
 const REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -18,13 +19,7 @@ function droneName(slug: string) {
   return DRONES.find((d) => d.slug === slug)?.name ?? slug
 }
 
-export interface FlyerUpload {
-  name: string
-  type: string
-  data: Buffer
-}
-
-export async function createBooking(input: BookingData, flyer?: FlyerUpload): Promise<Booking> {
+export async function createBooking(input: BookingData): Promise<Booking> {
   const sb = supabaseAdmin()
   const now = new Date().toISOString()
   const id = randomUUID()
@@ -50,11 +45,10 @@ export async function createBooking(input: BookingData, flyer?: FlyerUpload): Pr
     drone_slug: input.drone_slug,
     drone_name: droneName(input.drone_slug),
     deliverables: input.deliverables,
-    has_flyer: input.has_flyer === "yes",
-    flyer_path: null,
-    flyer_name: null,
-    design_flyer: input.has_flyer === "no" && input.design_flyer,
-    flyer_details: input.has_flyer === "no" && input.design_flyer ? input.flyer_details || null : null,
+    needs_pilot: input.has_pilot === "no",
+    pilot_fee: input.has_pilot === "no" ? site.pilotFeeNaira : 0,
+    pilot_name: null,
+    pilot_phone: null,
     notes: input.notes || null,
     pay_option: input.pay_option,
     price: null,
@@ -69,26 +63,10 @@ export async function createBooking(input: BookingData, flyer?: FlyerUpload): Pr
     const db = mockDB()
     let reference = newReference()
     while (db.bookings.some((b) => b.reference === reference)) reference = newReference()
-    if (flyer && row.has_flyer) {
-      db.flyers.set(id, flyer)
-      row.flyer_path = `mock/${id}`
-      row.flyer_name = flyer.name
-    }
     const booking = { ...row, reference }
     db.bookings.unshift(booking)
     db.events.push({ id: randomUUID(), booking_id: id, status: "pending", note: "Booking received", created_at: now })
     return booking
-  }
-
-  if (flyer && row.has_flyer) {
-    const ext = flyer.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin"
-    const path = `${id}/flyer.${ext}`
-    const { error } = await sb.storage
-      .from(FLYER_BUCKET)
-      .upload(path, flyer.data, { contentType: flyer.type, upsert: true })
-    if (error) throw new Error(`Flyer upload failed: ${error.message}`)
-    row.flyer_path = path
-    row.flyer_name = flyer.name
   }
 
   // Retry on the rare reference collision (unique constraint).
@@ -151,6 +129,8 @@ export interface BookingPatch {
   status?: BookingStatus
   price?: number | null
   admin_note?: string | null
+  pilot_name?: string | null
+  pilot_phone?: string | null
 }
 
 export async function updateBooking(id: string, patch: BookingPatch, note?: string) {
@@ -234,14 +214,6 @@ export async function addNote(bookingId: string, status: BookingStatus, note: st
     return
   }
   await sb.from(T.events).insert({ booking_id: bookingId, status, note })
-}
-
-export async function flyerUrl(b: Booking): Promise<string | null> {
-  if (!b.flyer_path) return null
-  const sb = supabaseAdmin()
-  if (!sb) return `/api/admin/flyer/${b.id}?token=mock-admin`
-  const { data } = await sb.storage.from(FLYER_BUCKET).createSignedUrl(b.flyer_path, 60 * 30)
-  return data?.signedUrl ?? null
 }
 
 export async function addNotify(email: string, droneSlug: string) {

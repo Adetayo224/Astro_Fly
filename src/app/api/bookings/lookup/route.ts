@@ -15,6 +15,6 @@ export async function POST(req: Request) {
     )
   }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { admin_note, flyer_path, ...booking } = found.booking
+  const { admin_note, ...booking } = found.booking
   return NextResponse.json({ booking, events: found.events })
 }

@@ -13,7 +13,7 @@ const STEPS = [
   },
   {
     title: "Tell us about the day",
-    body: "Date, venue, programme and what you want to keep. Upload your flyer if you have one.",
+    body: "Date, venue, programme and what you want to keep. Bring your own pilot or let us match you with one.",
     readout: "PLAN",
   },
   {

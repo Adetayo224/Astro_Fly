@@ -27,14 +27,11 @@ export default function TeamAlertEmail({ booking, siteUrl }: { booking: Booking;
           ["Drone", booking.drone_name],
           ["Deliverables", deliverableLabels(booking.deliverables).join(", ")],
           [
-            "Flyer",
-            booking.has_flyer
-              ? `Uploaded (${booking.flyer_name})`
-              : booking.design_flyer
-                ? "Please design one"
-                : "None",
+            "Pilot",
+            booking.needs_pilot
+              ? `Match them with an Astro_Fly pilot (+NGN ${booking.pilot_fee.toLocaleString("en-NG")})`
+              : "They have their own pilot",
           ],
-          ["Flyer details", booking.flyer_details || "None"],
           ["Notes", booking.notes || "None"],
           ["Payment", booking.pay_option === "deposit" ? "Wants to pay a deposit now" : "Pay after confirmation"],
         ]}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { site } from "@/lib/site"
+import { site, upfrontNaira } from "@/lib/site"
 import { getBookingByReference } from "@/lib/server/bookings"
 import { initializePayment } from "@/lib/server/paystack"
 
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   let amount: number
   if (kind === "deposit") {
     if (booking.amount_paid > 0) return NextResponse.json({ error: "Deposit already paid" }, { status: 409 })
-    amount = booking.price ? Math.min(site.depositNaira, booking.price) : site.depositNaira
+    amount = booking.price ? Math.min(upfrontNaira(booking.needs_pilot), booking.price) : upfrontNaira(booking.needs_pilot)
   } else {
     if (!booking.price) return NextResponse.json({ error: "Your price has not been set yet" }, { status: 409 })
     amount = booking.price - booking.amount_paid
